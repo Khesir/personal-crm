@@ -1,99 +1,63 @@
 enum AppTab {
-  portfolio,
-  keepTrack,
-  timeTracker,
-  ariConnect,
-  minecraft;
-
-  String get label => switch (this) {
-        AppTab.portfolio => 'Portfolio',
-        AppTab.keepTrack => 'Keep Track',
-        AppTab.timeTracker => 'Time Tracker',
-        AppTab.ariConnect => 'Ari Connect',
-        AppTab.minecraft => 'Minecraft',
-      };
-}
-
-enum AppSection {
-  overview,
-  announcements,
-  releases,
-  analytics,
-  support,
-  blogs,
-  projects,
-  experiences,
-  posts,
   home,
-  about,
-  services,
+  projects,
   settings;
 
   String get label => switch (this) {
-        AppSection.overview => 'Overview',
-        AppSection.announcements => 'Announcements',
-        AppSection.releases => 'Releases',
-        AppSection.analytics => 'Analytics',
-        AppSection.support => 'Support',
-        AppSection.blogs => 'Blogs',
-        AppSection.projects => 'Projects',
-        AppSection.experiences => 'Experiences',
-        AppSection.posts => 'Posts',
-        AppSection.home => 'Home',
-        AppSection.about => 'About',
-        AppSection.services => 'Services',
-        AppSection.settings => 'Settings',
+        AppTab.home => 'Home',
+        AppTab.projects => 'Projects',
+        AppTab.settings => 'Settings',
       };
 }
 
-const Map<AppTab, List<AppSection>> kTabSections = {
-  AppTab.portfolio: [
-    AppSection.overview,
-    AppSection.blogs,
-    AppSection.projects,
-    AppSection.experiences,
-    AppSection.posts,
-    AppSection.home,
-    AppSection.about,
-    AppSection.services,
-    AppSection.settings,
-  ],
-  AppTab.keepTrack: [
-    AppSection.overview,
-    AppSection.announcements,
-    AppSection.releases,
-    AppSection.analytics,
-    AppSection.support,
-    AppSection.settings,
-  ],
-  AppTab.timeTracker: [AppSection.overview, AppSection.settings],
-  AppTab.ariConnect: [AppSection.overview, AppSection.analytics, AppSection.settings],
-  AppTab.minecraft: [AppSection.overview, AppSection.settings],
-};
+enum ProjectSection {
+  kanban,
+  bugReports,
+  announcements;
 
-typedef SectionGroup = ({String? label, List<AppSection> sections});
+  String get label => switch (this) {
+        ProjectSection.kanban => 'Kanban',
+        ProjectSection.bugReports => 'Bug Reports',
+        ProjectSection.announcements => 'Announcements',
+      };
+}
 
-const Map<AppTab, List<SectionGroup>> kTabSectionGroups = {
-  AppTab.portfolio: [
-    (label: null, sections: [AppSection.overview]),
-    (label: 'Data', sections: [AppSection.blogs, AppSection.projects, AppSection.experiences, AppSection.posts]),
-    (label: 'Pages', sections: [AppSection.home, AppSection.about, AppSection.services]),
-  ],
-};
+enum SettingsSection {
+  projects,
+  services,
+  about;
+
+  String get label => switch (this) {
+        SettingsSection.projects => 'Projects',
+        SettingsSection.services => 'Services',
+        SettingsSection.about => 'About',
+      };
+}
 
 class ShellStateData {
   final AppTab selectedTab;
-  final AppSection selectedSection;
+  final String? selectedProjectId;
+  final ProjectSection selectedProjectSection;
+  final SettingsSection selectedSettingsSection;
 
   const ShellStateData({
     required this.selectedTab,
-    required this.selectedSection,
+    this.selectedProjectId,
+    required this.selectedProjectSection,
+    required this.selectedSettingsSection,
   });
 
-  ShellStateData copyWith({AppTab? selectedTab, AppSection? selectedSection}) {
+  ShellStateData copyWith({
+    AppTab? selectedTab,
+    String? selectedProjectId,
+    ProjectSection? selectedProjectSection,
+    SettingsSection? selectedSettingsSection,
+  }) {
     return ShellStateData(
       selectedTab: selectedTab ?? this.selectedTab,
-      selectedSection: selectedSection ?? this.selectedSection,
+      selectedProjectId: selectedProjectId ?? this.selectedProjectId,
+      selectedProjectSection: selectedProjectSection ?? this.selectedProjectSection,
+      selectedSettingsSection: selectedSettingsSection ?? this.selectedSettingsSection,
     );
   }
 }

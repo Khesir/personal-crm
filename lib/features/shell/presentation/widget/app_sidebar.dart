@@ -1,22 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
-import 'package:crm/features/keep_track/domain/controller/support_controller.dart';
+import 'package:crm/features/home/api.dart';
+import 'package:crm/features/settings/api.dart';
 import '../../domain/controller/shell_controller.dart';
 import '../state/shell_state.dart';
 
 class AppSidebar extends StatelessWidget {
   final ShellController controller;
-  final SupportController? supportCtrl;
 
-  const AppSidebar({super.key, required this.controller, this.supportCtrl});
-
-  Color _accentFor(AppTab tab) => switch (tab) {
-        AppTab.portfolio => AppColors.accentPortfolio,
-        AppTab.keepTrack => AppColors.accentKeepTrack,
-        AppTab.timeTracker => AppColors.accentTimeTracker,
-        AppTab.ariConnect => AppColors.accentAriConnect,
-        AppTab.minecraft => AppColors.accentMinecraft,
-      };
+  const AppSidebar({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -25,96 +18,151 @@ class AppSidebar extends StatelessWidget {
       initialData: controller.state,
       builder: (context, snapshot) {
         final shellState = snapshot.data!;
-        final sections = kTabSections[shellState.selectedTab]!;
-        final accent = _accentFor(shellState.selectedTab);
-
-        final groups = kTabSectionGroups[shellState.selectedTab];
-
         return Container(
           width: AppStyling.sidebarWidth,
           color: AppColors.surface,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppStyling.spaceLg),
-              if (groups != null)
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final group in groups) ...[
-                          if (group.label != null)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                AppStyling.spaceLg, AppStyling.spaceMd, AppStyling.spaceLg, AppStyling.spaceXs,
-                              ),
-                              child: Text(group.label!.toUpperCase(), style: AppStyling.label),
-                            )
-                          else
-                            const SizedBox(height: AppStyling.spaceXs),
-                          for (final section in group.sections)
-                            _SidebarItem(
-                              section: section,
-                              selected: shellState.selectedSection == section,
-                              accent: accent,
-                              onTap: () => controller.selectSection(section),
-                            ),
-                        ],
-                      ],
-                    ),
-                  ),
-                )
-              else ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppStyling.spaceLg,
-                    vertical: AppStyling.spaceSm,
-                  ),
-                  child: Text('NAVIGATION', style: AppStyling.label),
-                ),
-                for (final section in sections.where((s) => s != AppSection.settings))
-                  _SidebarItem(
-                    section: section,
-                    selected: shellState.selectedSection == section,
-                    accent: accent,
-                    onTap: () => controller.selectSection(section),
-                    badge: section == AppSection.support && supportCtrl != null
-                        ? supportCtrl!.hasUnreadNotifier
-                        : null,
-                  ),
-                const Spacer(),
-              ],
-              if (groups != null) const Spacer(),
-              Divider(height: 1, thickness: 0.5, color: AppColors.border),
-              _SidebarItem(
-                section: AppSection.settings,
-                selected: shellState.selectedSection == AppSection.settings,
-                accent: accent,
-                onTap: () => controller.selectSection(AppSection.settings),
+          child: switch (shellState.selectedTab) {
+            AppTab.home => const _HomeSidebar(),
+            AppTab.projects => _ProjectsSidebar(
+                selectedProjectId: shellState.selectedProjectId,
+                onSelect: controller.selectProject,
               ),
-              const SizedBox(height: AppStyling.spaceSm),
-            ],
-          ),
+            AppTab.settings => _SettingsSidebar(
+                selected: shellState.selectedSettingsSection,
+                onSelect: controller.selectSettingsSection,
+              ),
+          },
         );
       },
     );
   }
 }
 
+class _SidebarHeader extends StatelessWidget {
+  final String label;
+
+  const _SidebarHeader({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppStyling.spaceLg, AppStyling.spaceLg, AppStyling.spaceLg, AppStyling.spaceSm,
+      ),
+      child: Text(label.toUpperCase(), style: AppStyling.label),
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  final String text;
+
+  const _EmptyHint({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppStyling.spaceLg),
+      child: Text(text, style: AppStyling.bodySm),
+    );
+  }
+}
+
+class _HomeSidebar extends StatelessWidget {
+  const _HomeSidebar();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ChatController>(
+      future: createChatController(),
+      builder: (context, snapshot) {
+        final controller = snapshot.data;
+        if (controller == null) {
+          return const SizedBox.shrink();
+        }
+        return HomeSidebarSection(controller: controller);
+      },
+    );
+  }
+}
+
+class _ProjectsSidebar extends StatelessWidget {
+  final String? selectedProjectId;
+  final ValueChanged<String> onSelect;
+
+  const _ProjectsSidebar({required this.selectedProjectId, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ProjectsController>(
+      future: createProjectsController(),
+      builder: (context, snapshot) {
+        final controller = snapshot.data;
+        if (controller == null) {
+          return const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SidebarHeader(label: 'Projects'),
+            ],
+          );
+        }
+        return AsyncStreamBuilder<List<Project>>(
+          state: controller,
+          builder: (context, projects) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _SidebarHeader(label: 'Projects'),
+                if (projects.isEmpty)
+                  const _EmptyHint(text: 'No projects registered yet.')
+                else
+                  for (final project in projects)
+                    _SidebarItem(
+                      label: project.name,
+                      selected: project.id == selectedProjectId,
+                      onTap: () => onSelect(project.id),
+                    ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _SettingsSidebar extends StatelessWidget {
+  final SettingsSection selected;
+  final ValueChanged<SettingsSection> onSelect;
+
+  const _SettingsSidebar({required this.selected, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SidebarHeader(label: 'Settings'),
+        for (final section in SettingsSection.values)
+          _SidebarItem(
+            label: section.label,
+            selected: section == selected,
+            onTap: () => onSelect(section),
+          ),
+      ],
+    );
+  }
+}
+
 class _SidebarItem extends StatefulWidget {
-  final AppSection section;
+  final String label;
   final bool selected;
-  final Color accent;
   final VoidCallback onTap;
-  final ValueNotifier<bool>? badge;
 
   const _SidebarItem({
-    required this.section,
+    required this.label,
     required this.selected,
-    required this.accent,
     required this.onTap,
-    this.badge,
   });
 
   @override
@@ -143,7 +191,7 @@ class _SidebarItemState extends State<_SidebarItem> {
           ),
           decoration: BoxDecoration(
             color: widget.selected
-                ? widget.accent.withValues(alpha: 0.12)
+                ? AppColors.accentBg
                 : _hovered
                     ? AppColors.surfaceElevated
                     : Colors.transparent,
@@ -156,7 +204,7 @@ class _SidebarItemState extends State<_SidebarItem> {
                   width: 3,
                   height: 14,
                   decoration: BoxDecoration(
-                    color: widget.accent,
+                    color: AppColors.accent,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 )
@@ -164,33 +212,16 @@ class _SidebarItemState extends State<_SidebarItem> {
                 const SizedBox(width: 3),
               const SizedBox(width: AppStyling.spaceSm),
               Text(
-                widget.section.label,
+                widget.label,
                 style: AppStyling.bodySm.copyWith(
                   color: widget.selected
-                      ? widget.accent
+                      ? AppColors.accentLight
                       : _hovered
                           ? AppColors.textPrimary
                           : AppColors.textSecondary,
-                  fontWeight:
-                      widget.selected ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
-              if (widget.badge != null) ...[
-                const Spacer(),
-                ValueListenableBuilder<bool>(
-                  valueListenable: widget.badge!,
-                  builder: (_, hasUnread, __) => hasUnread
-                      ? Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: AppColors.error,
-                            shape: BoxShape.circle,
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ],
             ],
           ),
         ),

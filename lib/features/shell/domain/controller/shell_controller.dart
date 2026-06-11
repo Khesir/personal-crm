@@ -4,17 +4,31 @@ import '../../presentation/state/shell_state.dart';
 class ShellController extends StreamState<ShellStateData> {
   ShellController()
       : super(const ShellStateData(
-          selectedTab: AppTab.portfolio,
-          selectedSection: AppSection.overview,
+          selectedTab: AppTab.home,
+          selectedProjectSection: ProjectSection.kanban,
+          selectedSettingsSection: SettingsSection.projects,
         ));
 
   void selectTab(AppTab tab) {
-    final sections = kTabSections[tab]!;
-    final section = sections.first;
-    emit(state.copyWith(selectedTab: tab, selectedSection: section));
+    emit(state.copyWith(selectedTab: tab));
   }
 
-  void selectSection(AppSection section) {
-    emit(state.copyWith(selectedSection: section));
+  void selectProject(String projectId) {
+    emit(state.copyWith(
+      selectedProjectId: projectId,
+      selectedProjectSection: ProjectSection.kanban,
+    ));
+  }
+
+  void selectProjectSection(
+    ProjectSection section, {
+    Set<ProjectSection>? enabledSections,
+  }) {
+    if (enabledSections != null && !enabledSections.contains(section)) return;
+    emit(state.copyWith(selectedProjectSection: section));
+  }
+
+  void selectSettingsSection(SettingsSection section) {
+    emit(state.copyWith(selectedSettingsSection: section));
   }
 }

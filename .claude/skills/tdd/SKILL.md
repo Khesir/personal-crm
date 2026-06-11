@@ -60,9 +60,9 @@ WRONG (horizontal):
   GREEN: impl1, impl2, impl3, impl4, impl5
 
 RIGHT (vertical):
-  RED→GREEN: test1→impl1
-  RED→GREEN: test2→impl2
-  RED→GREEN: test3→impl3
+  RED->GREEN: test1->impl1
+  RED->GREEN: test2->impl2
+  RED->GREEN: test3->impl3
   ...
 ```
 
@@ -81,6 +81,7 @@ Before writing any code:
 - [ ] Identify opportunities for deep modules (small interface, deep implementation)
 - [ ] Design interfaces for testability (accept dependencies, return results)
 - [ ] List the behaviors to test — not implementation steps, behaviors
+- [ ] Flag any visual criteria as out of scope — note them for human QA
 - [ ] Get user approval on the plan
 
 Ask: "What should the public interface look like? Which behaviors are most
@@ -90,13 +91,26 @@ important to test?"
 matter most. Focus testing effort on critical paths and complex logic, not
 every possible edge case.
 
+**Never write tests for visual behavior.** Anything that requires a human eye
+to verify is out of scope for automated tests. This includes:
+- UI layout, spacing, alignment, or visual appearance
+- Animations and transitions
+- Rendered output (colors, fonts, icons)
+- Screenshots or pixel-level comparisons
+- Any criterion phrased as "looks correct", "displays properly", or "appears"
+
+If an acceptance criterion is visual, skip it and note: "Visual — requires
+human QA." Do not attempt to automate it. Do not launch the app, take
+screenshots, or use computer use tools to verify visual output. Those go into
+the /qa visual checklist, not automated tests.
+
 ### 2. Tracer Bullet
 
 Write ONE test that confirms ONE thing about the system:
 
 ```
-RED:   Write test for first behavior → test fails
-GREEN: Write minimal code to pass → test passes
+RED:   Write test for first behavior -> test fails
+GREEN: Write minimal code to pass -> test passes
 ```
 
 This is your tracer bullet — proves the path works end-to-end.
@@ -106,8 +120,8 @@ This is your tracer bullet — proves the path works end-to-end.
 For each remaining behavior:
 
 ```
-RED:   Write next test → fails
-GREEN: Minimal code to pass → passes
+RED:   Write next test -> fails
+GREEN: Minimal code to pass -> passes
 ```
 
 Rules:
@@ -200,4 +214,5 @@ function process_payment(order):
 [ ] Code is minimal for this test
 [ ] No speculative features added
 [ ] Mocks only at system boundaries
+[ ] No visual criteria attempted — those are flagged for human QA
 ```
