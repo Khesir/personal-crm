@@ -9,8 +9,14 @@ import '../widget/kanban_column.dart';
 class KanbanSection extends StatefulWidget {
   final IssuesController controller;
   final void Function(Issue issue)? onIssueTap;
+  final bool readOnly;
 
-  const KanbanSection({super.key, required this.controller, this.onIssueTap});
+  const KanbanSection({
+    super.key,
+    required this.controller,
+    this.onIssueTap,
+    this.readOnly = false,
+  });
 
   @override
   State<KanbanSection> createState() => _KanbanSectionState();

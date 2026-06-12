@@ -23,6 +23,19 @@ class _StreamStateBuilderState<T> extends State<StreamStateBuilder<T>> {
   @override
   void initState() {
     super.initState();
+    _subscribe();
+  }
+
+  @override
+  void didUpdateWidget(covariant StreamStateBuilder<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.state != oldWidget.state) {
+      _subscription.cancel();
+      _subscribe();
+    }
+  }
+
+  void _subscribe() {
     _currentState = widget.state.state;
     _subscription = widget.state.stream.listen((newState) {
       if (mounted) setState(() => _currentState = newState);

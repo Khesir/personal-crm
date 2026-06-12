@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../../domain/model/chat_message.dart';
+import 'chat_error_mapper.dart';
 
 class OllamaDatasource {
   final Dio _dio;
@@ -53,7 +54,7 @@ class OllamaDatasource {
         }
         await controller.close();
       } catch (e, st) {
-        controller.addError(e, st);
+        controller.addError(await describeChatError(e), st);
         await controller.close();
       }
     }();

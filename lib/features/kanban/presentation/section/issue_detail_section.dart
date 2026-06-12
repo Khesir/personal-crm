@@ -14,6 +14,7 @@ class IssueDetailSection extends StatelessWidget {
   final Issue issue;
   final VoidCallback onBack;
   final VoidCallback onRunSkill;
+  final bool readOnly;
 
   const IssueDetailSection({
     super.key,
@@ -21,6 +22,7 @@ class IssueDetailSection extends StatelessWidget {
     required this.issue,
     required this.onBack,
     required this.onRunSkill,
+    this.readOnly = false,
   });
 
   void _toggleCriteria(int index) {
@@ -54,6 +56,7 @@ class IssueDetailSection extends StatelessWidget {
             onMove: _move,
             onEdit: () => _edit(context),
             onRunSkill: onRunSkill,
+            readOnly: readOnly,
           ),
           const SizedBox(height: AppStyling.spaceLg),
           Expanded(
@@ -70,7 +73,7 @@ class IssueDetailSection extends StatelessWidget {
                           const SizedBox(height: AppStyling.spaceLg),
                           AcceptanceCriteriaList(
                             items: criteria,
-                            onToggle: _toggleCriteria,
+                            onToggle: readOnly ? null : _toggleCriteria,
                           ),
                         ],
                       ],
@@ -116,6 +119,7 @@ class _DetailHeader extends StatelessWidget {
   final ValueChanged<IssueStatus> onMove;
   final VoidCallback onEdit;
   final VoidCallback onRunSkill;
+  final bool readOnly;
 
   const _DetailHeader({
     required this.issue,
@@ -123,6 +127,7 @@ class _DetailHeader extends StatelessWidget {
     required this.onMove,
     required this.onEdit,
     required this.onRunSkill,
+    this.readOnly = false,
   });
 
   @override
@@ -149,11 +154,13 @@ class _DetailHeader extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        IssueStatusPicker(status: issue.status, onChanged: onMove),
-        const SizedBox(width: AppStyling.spaceMd),
-        _ActionButton(label: 'Run skill', icon: Icons.smart_toy_outlined, onTap: onRunSkill),
-        const SizedBox(width: AppStyling.spaceMd),
-        _ActionButton(label: 'Edit', icon: Icons.edit_outlined, onTap: onEdit),
+        if (!readOnly) ...[
+          IssueStatusPicker(status: issue.status, onChanged: onMove),
+          const SizedBox(width: AppStyling.spaceMd),
+          _ActionButton(label: 'Run skill', icon: Icons.smart_toy_outlined, onTap: onRunSkill),
+          const SizedBox(width: AppStyling.spaceMd),
+          _ActionButton(label: 'Edit', icon: Icons.edit_outlined, onTap: onEdit),
+        ],
       ],
     );
   }

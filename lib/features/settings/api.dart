@@ -1,7 +1,9 @@
 export 'di.dart';
-export 'domain/controller/settings_controller.dart';
 export 'domain/controller/projects_controller.dart';
+export 'domain/controller/service_cards_controller.dart';
 export 'domain/model/project.dart';
+export 'domain/model/service_card.dart';
+export 'domain/model/health_status.dart';
 export 'presentation/section/services_section.dart';
 export 'presentation/section/about_section.dart';
 export 'presentation/section/projects_section.dart';

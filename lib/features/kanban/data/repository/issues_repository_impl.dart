@@ -45,6 +45,45 @@ class IssuesRepositoryImpl implements IssuesRepository {
   }
 
   @override
+  Future<List<Issue>> getArchivedIssues(
+    String localPath,
+    String archiveName,
+  ) async {
+    final archiveDir = Directory(
+      p.join(localPath, 'issues', 'archive', archiveName),
+    );
+    if (!await archiveDir.exists()) return [];
+
+    final issues = <Issue>[];
+    for (final entry in _statusFolders.entries) {
+      final statusDir = Directory(p.join(archiveDir.path, entry.value));
+      if (!await statusDir.exists()) continue;
+
+      await for (final fileEntity in statusDir.list()) {
+        if (fileEntity is! File || !fileEntity.path.endsWith('.md')) continue;
+
+        final contents = await fileEntity.readAsString();
+        final issue = parser.parse(contents, entry.key, fileEntity.path);
+        if (issue != null) issues.add(issue);
+      }
+    }
+    return issues;
+  }
+
+  @override
+  Future<List<String>> listArchives(String localPath) async {
+    final archiveDir = Directory(p.join(localPath, 'issues', 'archive'));
+    if (!await archiveDir.exists()) return [];
+
+    final names = <String>[];
+    await for (final entity in archiveDir.list()) {
+      if (entity is Directory) names.add(p.basename(entity.path));
+    }
+    names.sort((a, b) => b.compareTo(a));
+    return names;
+  }
+
+  @override
   Future<Issue> createIssue(String localPath, Issue issue) async {
     final backlogDir = Directory(
       p.join(localPath, 'issues', _statusFolders[IssueStatus.backlog]!),

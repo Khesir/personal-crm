@@ -21,13 +21,38 @@ class FakeIssuesRepository implements IssuesRepository {
   Issue? lastCreatedIssue;
   String? lastCreatedLocalPath;
 
-  FakeIssuesRepository([List<Issue>? initial]) : issues = initial ?? [];
+  List<Issue> archivedIssues;
+  List<String> archives;
+  String? lastArchiveLocalPath;
+  String? lastArchiveName;
+  String? lastListArchivesLocalPath;
+
+  FakeIssuesRepository([List<Issue>? initial])
+    : issues = initial ?? [],
+      archivedIssues = [],
+      archives = [];
 
   @override
   Future<List<Issue>> getIssues(String localPath) async {
     callCount++;
     lastLocalPath = localPath;
     return List.unmodifiable(issues);
+  }
+
+  @override
+  Future<List<Issue>> getArchivedIssues(
+    String localPath,
+    String archiveName,
+  ) async {
+    lastArchiveLocalPath = localPath;
+    lastArchiveName = archiveName;
+    return List.unmodifiable(archivedIssues);
+  }
+
+  @override
+  Future<List<String>> listArchives(String localPath) async {
+    lastListArchivesLocalPath = localPath;
+    return List.unmodifiable(archives);
   }
 
   @override
@@ -125,6 +150,33 @@ void main() {
       expect(controller.data, hasLength(1));
       expect(controller.data!.first.id, 'issue-001');
       expect(repo.lastLocalPath, r'C:\repo');
+
+      controller.dispose();
+    });
+
+    test('loadArchive() populates state with issues from the archive', () async {
+      final repo = FakeIssuesRepository();
+      repo.archivedIssues = [
+        const Issue(
+          id: 'issue-001',
+          title: 'Shell rewrite and theme',
+          feature: 'shell',
+          status: IssueStatus.done,
+          createdAt: null,
+          tags: ['ui'],
+          body: 'Body',
+          filePath: r'C:\repo\issues\archive\2026-06-12-dev-command-center\done\issue-001.md',
+        ),
+      ];
+      final controller = IssuesController(repo);
+
+      await controller.loadArchive(r'C:\repo', '2026-06-12-dev-command-center');
+
+      expect(controller.data, hasLength(1));
+      expect(controller.data!.first.id, 'issue-001');
+      expect(controller.data!.first.status, IssueStatus.done);
+      expect(repo.lastArchiveLocalPath, r'C:\repo');
+      expect(repo.lastArchiveName, '2026-06-12-dev-command-center');
 
       controller.dispose();
     });

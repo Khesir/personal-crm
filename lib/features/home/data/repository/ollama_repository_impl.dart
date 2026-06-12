@@ -1,8 +1,8 @@
 import '../../domain/model/chat_message.dart';
-import '../../domain/repository/ollama_repository.dart';
+import '../../domain/repository/chat_model_repository.dart';
 import '../datasource/ollama_datasource.dart';
 
-class OllamaRepositoryImpl implements OllamaRepository {
+class OllamaRepositoryImpl implements ChatModelRepository {
   final OllamaDatasource datasource;
 
   OllamaRepositoryImpl(this.datasource);

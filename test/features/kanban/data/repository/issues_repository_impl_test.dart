@@ -25,6 +25,19 @@ void main() {
       File(p.join(dir.path, fileName)).writeAsStringSync(contents);
     }
 
+    void writeArchivedIssue(
+      String archiveName,
+      String folder,
+      String fileName,
+      String contents,
+    ) {
+      final dir = Directory(
+        p.join(tempDir.path, 'issues', 'archive', archiveName, folder),
+      );
+      dir.createSync(recursive: true);
+      File(p.join(dir.path, fileName)).writeAsStringSync(contents);
+    }
+
     test('returns empty list when issues folder does not exist', () async {
       final issues = await repository.getIssues(tempDir.path);
 
@@ -126,6 +139,110 @@ Body.
 
       expect(issues, hasLength(2));
       expect(issues.map((i) => i.status), containsAll([IssueStatus.backlog, IssueStatus.done]));
+    });
+
+    test('getArchivedIssues() parses a single issue from an archive folder', () async {
+      writeArchivedIssue('2026-06-12-dev-command-center', 'done', 'issue-001.md', '''
+---
+id: issue-001
+title: Shell rewrite and theme
+feature: shell
+status: done
+created_at: 2026-06-01
+tags: [ui]
+---
+
+## Description
+Body text here.
+''');
+
+      final issues = await repository.getArchivedIssues(
+        tempDir.path,
+        '2026-06-12-dev-command-center',
+      );
+
+      expect(issues, hasLength(1));
+      final issue = issues.first;
+      expect(issue.id, 'issue-001');
+      expect(issue.title, 'Shell rewrite and theme');
+      expect(issue.feature, 'shell');
+      expect(issue.status, IssueStatus.done);
+      expect(issue.createdAt, DateTime(2026, 6, 1));
+      expect(issue.tags, ['ui']);
+      expect(issue.body.trim(), '## Description\nBody text here.');
+    });
+
+    test('getArchivedIssues() groups issues from multiple status folders and skips files without frontmatter', () async {
+      writeArchivedIssue('2026-06-12-dev-command-center', 'done', 'issue-001.md', '''
+---
+id: issue-001
+title: Shell rewrite and theme
+feature: shell
+status: done
+created_at: 2026-06-01
+tags: []
+---
+Body.
+''');
+      writeArchivedIssue('2026-06-12-dev-command-center', 'backlog', 'issue-002.md', '''
+---
+id: issue-002
+title: Backlog issue
+feature: core
+status: backlog
+created_at: 2026-06-02
+tags: []
+---
+Body.
+''');
+      writeArchivedIssue('2026-06-12-dev-command-center', 'done', '003-no-frontmatter.md', '''
+# [003] Title without frontmatter
+
+Some text without a frontmatter block.
+''');
+
+      final issues = await repository.getArchivedIssues(
+        tempDir.path,
+        '2026-06-12-dev-command-center',
+      );
+
+      expect(issues, hasLength(2));
+      expect(issues.map((i) => i.status), containsAll([IssueStatus.backlog, IssueStatus.done]));
+    });
+
+    test('getArchivedIssues() returns empty list when the archive does not exist', () async {
+      final issues = await repository.getArchivedIssues(
+        tempDir.path,
+        '2026-06-12-dev-command-center',
+      );
+
+      expect(issues, isEmpty);
+    });
+
+    test('listArchives() returns empty list when issues/archive does not exist', () async {
+      final archives = await repository.listArchives(tempDir.path);
+
+      expect(archives, isEmpty);
+    });
+
+    test('listArchives() returns archive folder names sorted descending', () async {
+      Directory(
+        p.join(tempDir.path, 'issues', 'archive', '2026-06-12-dev-command-center'),
+      ).createSync(recursive: true);
+      Directory(
+        p.join(tempDir.path, 'issues', 'archive', '2026-01-01-early-feature'),
+      ).createSync(recursive: true);
+      Directory(
+        p.join(tempDir.path, 'issues', 'archive', '2026-09-30-later-feature'),
+      ).createSync(recursive: true);
+
+      final archives = await repository.listArchives(tempDir.path);
+
+      expect(archives, [
+        '2026-09-30-later-feature',
+        '2026-06-12-dev-command-center',
+        '2026-01-01-early-feature',
+      ]);
     });
 
     test('updateIssue() persists field changes to the file', () async {

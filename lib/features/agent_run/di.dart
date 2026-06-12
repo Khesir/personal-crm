@@ -1,12 +1,13 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:crm/core/di/di.dart';
+import 'package:crm/features/settings/domain/model/service_card.dart';
+import 'package:crm/features/settings/domain/model/service_cards_cache.dart';
 import 'data/datasource/agent_run_datasource.dart';
 import 'data/repository/agent_run_repository_impl.dart';
 import 'domain/controller/agent_run_controller.dart';
 
 Dio _buildN8nDio() {
-  final baseUrl = dotenv.env['N8N_BASE_URL'] ?? 'http://localhost:5678';
+  final baseUrl = ServiceCardsCache.instance.field(ServiceType.n8n, 'baseUrl');
   return Dio(BaseOptions(
     baseUrl: baseUrl,
     connectTimeout: const Duration(seconds: 10),

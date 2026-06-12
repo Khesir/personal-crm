@@ -2,7 +2,7 @@
 id: issue-002
 title: "Read-only issue detail for archived boards"
 feature: kanban-archive
-status: backlog
+status: done
 created_at: 2026-06-12
 tags: [afk, p2]
 ---
@@ -53,3 +53,10 @@ No — this is UI wiring (read-only flag controlling which controls render), cov
 ## Log
 
 _Updated as work progresses._
+
+- Added `readOnly` (default `false`) to `IssueDetailSection` and `_DetailHeader`; when true, `_DetailHeader` omits `IssueStatusPicker`, the "Run skill" button, and the "Edit" button, and `AcceptanceCriteriaList` is built with `onToggle: null`.
+- Made `AcceptanceCriteriaList`/`_CriteriaItem`'s `onToggle` nullable: `onToggle == null` renders a static, disabled `Checkbox` (`onChanged: null`) with no `InkWell` wrapper, so checkboxes are non-interactive (no ripple/hover) and no toggle is ever persisted.
+- Wired `_KanbanOrDetail` in `app_shell_screen.dart` to pass `readOnly: readOnly` to `IssueDetailSection` in the detail branch. Verified `KanbanSection`'s `readOnly` remains an inert accepted-but-unused param (no change needed). `flutter analyze` shows only 2 pre-existing unrelated deprecation warnings; full `flutter test` suite passes (94/94).
+- Returned to backlog on 2026-06-13 — blocker 001 (archive switching) was rejected in QA and is back in `ready/`, so this read-only detail view can't be visually verified against an archived board yet. Re-test once 001 returns to qa/done.
+- Re-verified on 2026-06-13 now that 001 (archive switching) is back in qa/ — confirmed `_KanbanOrDetail` still passes `readOnly: kanbanReadOnly` (true only when `_selectedArchive != null`) through to `IssueDetailSection`, and the archive-controller's `AsyncStreamBuilder` issue lookup (which now relies on 001's fixed `didUpdateWidget` re-subscription) correctly feeds the detail view; no fix needed. `flutter analyze` clean (only the 2 pre-existing `activeColor`/`deprecated_member_use` infos) and `flutter test` passes 112/112.
+- QA approved by user on 2026-06-13.

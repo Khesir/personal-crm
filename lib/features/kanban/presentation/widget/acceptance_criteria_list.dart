@@ -4,17 +4,19 @@ import '../../domain/helper/acceptance_criteria_parser.dart';
 
 class AcceptanceCriteriaList extends StatelessWidget {
   final List<AcceptanceCriteriaItem> items;
-  final void Function(int index) onToggle;
+  final void Function(int index)? onToggle;
 
   const AcceptanceCriteriaList({
     super.key,
     required this.items,
-    required this.onToggle,
+    this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
+
+    final onToggle = this.onToggle;
 
     return Container(
       width: double.infinity,
@@ -31,7 +33,7 @@ class AcceptanceCriteriaList extends StatelessWidget {
           const SizedBox(height: AppStyling.spaceMd),
           for (var i = 0; i < items.length; i++) _CriteriaItem(
             item: items[i],
-            onToggle: () => onToggle(i),
+            onToggle: onToggle == null ? null : () => onToggle(i),
           ),
         ],
       ),
@@ -41,40 +43,45 @@ class AcceptanceCriteriaList extends StatelessWidget {
 
 class _CriteriaItem extends StatelessWidget {
   final AcceptanceCriteriaItem item;
-  final VoidCallback onToggle;
+  final VoidCallback? onToggle;
 
   const _CriteriaItem({required this.item, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onToggle,
-      borderRadius: BorderRadius.circular(AppStyling.radiusSm),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppStyling.spaceXs),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Checkbox(
-              value: item.checked,
-              onChanged: (_) => onToggle(),
-              activeColor: AppColors.accent,
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: AppStyling.spaceSm),
-                child: Text(
-                  item.text,
-                  style: AppStyling.bodyLg.copyWith(
-                    color: item.checked ? AppColors.textSecondary : AppColors.textPrimary,
-                    decoration: item.checked ? TextDecoration.lineThrough : null,
-                  ),
+    final onToggle = this.onToggle;
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppStyling.spaceXs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            value: item.checked,
+            onChanged: onToggle == null ? null : (_) => onToggle(),
+            activeColor: AppColors.accent,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: AppStyling.spaceSm),
+              child: Text(
+                item.text,
+                style: AppStyling.bodyLg.copyWith(
+                  color: item.checked ? AppColors.textSecondary : AppColors.textPrimary,
+                  decoration: item.checked ? TextDecoration.lineThrough : null,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+
+    if (onToggle == null) return content;
+
+    return InkWell(
+      onTap: onToggle,
+      borderRadius: BorderRadius.circular(AppStyling.radiusSm),
+      child: content,
     );
   }
 }

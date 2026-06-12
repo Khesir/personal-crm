@@ -2,7 +2,7 @@
 id: issue-001
 title: "Archive board listing & switching (board view)"
 feature: kanban-archive
-status: ready
+status: done
 created_at: 2026-06-12
 tags: [afk, p1]
 ---
@@ -66,3 +66,26 @@ Yes — `IssuesRepositoryImpl` unit tests (temp-dir fixtures, same pattern as ex
 ## Log
 
 _Updated as work progresses._
+
+- Implemented `IssuesRepository.getArchivedIssues`/`listArchives` (independent scans, no shared helper) and `IssuesController.loadArchive`, with TDD coverage in `issues_repository_impl_test.dart` (5 new tests) and `issues_controller_test.dart` (1 new test, extended `FakeIssuesRepository`).
+- Wired the UI: `_ProjectsContentState` gains `_selectedArchive`/on-demand `_archiveController` (mirrors announcements/bug-reports lifecycle, reset on project change), a `PopupMenuButton`-style `_ArchiveDropdown` (manual `showMenu` with a "Loading…" interim item) plus `_ReadOnlyBadge`, subtitle text swap, and conditional Rescan/Run-skill vs. Read-only header row. `KanbanSection`/`_KanbanOrDetail` now accept `readOnly: bool` (plumbing only, no behavioral change).
+- `flutter test` (78/78) and `flutter analyze` (no new issues) both pass.
+- QA rejected on 2026-06-13. Bug appended — after selecting an archive, the kanban board does not repopulate with that archive's issues.
+- Bug fixed on 2026-06-13. Root cause was in the shared `StreamStateBuilder` (`lib/core/state/stream_builder_widget.dart`, used by `AsyncStreamBuilder`): its `_StreamStateBuilderState` captured the controller's initial state and subscribed to its stream only in `initState`, so when `_KanbanOrDetail` swapped `kanbanController` from `_issuesController` to `_archiveController`, the same state object kept its stale snapshot and stale subscription instead of picking up the archive controller's data. Added a `didUpdateWidget` override that re-subscribes (and refreshes `_currentState`) whenever the `StreamState` instance passed in changes, fixing `KanbanSection` (and every other `AsyncStreamBuilder`/`StreamStateBuilder` consumer) for this case.
+- QA approved by user on 2026-06-13.
+
+---
+
+## Bug
+
+**Reported:** 2026-06-13
+**Found during:** Visual QA
+**Description:** After switching the Archive dropdown from "Current" to an archived board, the kanban board does not repopulate — acceptance criterion #4 ("Selecting an archive shows that archive's issues in the same 5-column kanban layout") does not work.
+
+### What to fix
+_To be investigated during implementation._
+
+### Acceptance Criteria
+- [ ] Bug no longer reproduces
+- [ ] Original acceptance criteria still met
+- [ ] A test exists that would have caught this

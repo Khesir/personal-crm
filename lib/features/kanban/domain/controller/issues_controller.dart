@@ -11,6 +11,9 @@ class IssuesController extends StreamState<AsyncState<List<Issue>>> {
   Future<void> load(String localPath) =>
       execute(() => repository.getIssues(localPath));
 
+  Future<void> loadArchive(String localPath, String archiveName) =>
+      execute(() => repository.getArchivedIssues(localPath, archiveName));
+
   Future<void> updateIssue(
     Issue issue, {
     String? title,

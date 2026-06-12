@@ -243,8 +243,8 @@ class _ServicesContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<SettingsController>(
-      future: createSettingsController(),
+    return FutureBuilder<ServiceCardsController>(
+      future: createServiceCardsController(),
       builder: (context, snapshot) {
         final controller = snapshot.data;
         if (controller == null) {
@@ -322,6 +322,7 @@ class _ProjectsContent extends StatefulWidget {
 
 class _ProjectsContentState extends State<_ProjectsContent> {
   late IssuesController _issuesController;
+  late IssuesRepository _issuesRepository;
   String? _loadedLocalPath;
   String? _selectedIssueId;
   AnnouncementsController? _announcementsController;
@@ -329,10 +330,14 @@ class _ProjectsContentState extends State<_ProjectsContent> {
   BugReportsController? _bugReportsController;
   String? _bugReportsProjectKey;
 
+  String? _selectedArchive;
+  IssuesController? _archiveController;
+
   @override
   void initState() {
     super.initState();
     _issuesController = createIssuesController();
+    _issuesRepository = createIssuesRepository();
     _loadIssuesIfNeeded();
     _ensureAnnouncementsController();
     _ensureBugReportsController();
@@ -351,6 +356,7 @@ class _ProjectsContentState extends State<_ProjectsContent> {
     _issuesController.dispose();
     _announcementsController?.dispose();
     _bugReportsController?.dispose();
+    _archiveController?.dispose();
     super.dispose();
   }
 
@@ -359,7 +365,43 @@ class _ProjectsContentState extends State<_ProjectsContent> {
     if (localPath != null && localPath != _loadedLocalPath) {
       _loadedLocalPath = localPath;
       _issuesController.load(localPath);
+      _resetArchiveSelection();
     }
+  }
+
+  void _resetArchiveSelection() {
+    _archiveController?.dispose();
+    _archiveController = null;
+    if (_selectedArchive != null) {
+      setState(() => _selectedArchive = null);
+    } else {
+      _selectedArchive = null;
+    }
+  }
+
+  Future<List<String>> _listArchives() async {
+    final localPath = widget.selectedProject?.localPath;
+    if (localPath == null) return [];
+    return _issuesRepository.listArchives(localPath);
+  }
+
+  void _selectArchive(String? archiveName) {
+    if (archiveName == _selectedArchive) return;
+    final localPath = widget.selectedProject?.localPath;
+    _archiveController?.dispose();
+    if (archiveName == null || localPath == null) {
+      setState(() {
+        _selectedArchive = null;
+        _archiveController = null;
+      });
+      return;
+    }
+    final controller = createIssuesController();
+    controller.loadArchive(localPath, archiveName);
+    setState(() {
+      _selectedArchive = archiveName;
+      _archiveController = controller;
+    });
   }
 
   void _ensureAnnouncementsController() {
@@ -435,6 +477,8 @@ class _ProjectsContentState extends State<_ProjectsContent> {
                             Text(
                               project == null
                                   ? 'Select a project to see its kanban board.'
+                                  : _selectedArchive != null
+                                  ? 'Viewing archived board: $_selectedArchive — read-only'
                                   : 'Manage this project\'s work.',
                               style: AppStyling.pageSub,
                               maxLines: 1,
@@ -456,11 +500,29 @@ class _ProjectsContentState extends State<_ProjectsContent> {
                           ProjectSection.kanban) ...[
                     const SizedBox(height: AppStyling.spaceMd),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                      mainAxisAlignment: _selectedArchive == null
+                          ? MainAxisAlignment.spaceBetween
+                          : MainAxisAlignment.start,
                       children: [
-                        _RescanButton(onPressed: _rescan),
-                        const SizedBox(width: AppStyling.spaceMd),
-                        _RunSkillButton(onPressed: () => _runSkill(context)),
+                        _ArchiveDropdown(
+                          selectedArchive: _selectedArchive,
+                          onOpen: _listArchives,
+                          onSelect: _selectArchive,
+                        ),
+                        if (_selectedArchive != null) ...[
+                          const SizedBox(width: AppStyling.spaceMd),
+                          const _ReadOnlyBadge(),
+                        ] else ...[
+                          Row(
+                            children: [
+                              _RescanButton(onPressed: _rescan),
+                              const SizedBox(width: AppStyling.spaceMd),
+                              _RunSkillButton(
+                                onPressed: () => _runSkill(context),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -478,6 +540,8 @@ class _ProjectsContentState extends State<_ProjectsContent> {
                 : _ProjectSectionContent(
                     section: shellState.selectedProjectSection,
                     issuesController: _issuesController,
+                    kanbanController: _archiveController ?? _issuesController,
+                    kanbanReadOnly: _selectedArchive != null,
                     selectedIssueId: _selectedIssueId,
                     onIssueTap: _openIssue,
                     onCloseIssue: _closeIssue,
@@ -496,6 +560,8 @@ class _ProjectsContentState extends State<_ProjectsContent> {
 class _ProjectSectionContent extends StatelessWidget {
   final ProjectSection section;
   final IssuesController issuesController;
+  final IssuesController kanbanController;
+  final bool kanbanReadOnly;
   final String? selectedIssueId;
   final void Function(Issue issue) onIssueTap;
   final VoidCallback onCloseIssue;
@@ -507,6 +573,8 @@ class _ProjectSectionContent extends StatelessWidget {
   const _ProjectSectionContent({
     required this.section,
     required this.issuesController,
+    required this.kanbanController,
+    required this.kanbanReadOnly,
     required this.selectedIssueId,
     required this.onIssueTap,
     required this.onCloseIssue,
@@ -520,7 +588,8 @@ class _ProjectSectionContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (section) {
       ProjectSection.kanban => _KanbanOrDetail(
-        issuesController: issuesController,
+        issuesController: kanbanController,
+        readOnly: kanbanReadOnly,
         selectedIssueId: selectedIssueId,
         onIssueTap: onIssueTap,
         onCloseIssue: onCloseIssue,
@@ -553,6 +622,7 @@ class _ProjectSectionContent extends StatelessWidget {
 
 class _KanbanOrDetail extends StatelessWidget {
   final IssuesController issuesController;
+  final bool readOnly;
   final String? selectedIssueId;
   final void Function(Issue issue) onIssueTap;
   final VoidCallback onCloseIssue;
@@ -561,6 +631,7 @@ class _KanbanOrDetail extends StatelessWidget {
 
   const _KanbanOrDetail({
     required this.issuesController,
+    required this.readOnly,
     required this.selectedIssueId,
     required this.onIssueTap,
     required this.onCloseIssue,
@@ -575,6 +646,7 @@ class _KanbanOrDetail extends StatelessWidget {
       return KanbanSection(
         controller: issuesController,
         onIssueTap: onIssueTap,
+        readOnly: readOnly,
       );
     }
 
@@ -602,6 +674,7 @@ class _KanbanOrDetail extends StatelessWidget {
             project: project,
             context: {'issueId': issue!.id},
           ),
+          readOnly: readOnly,
         );
       },
     );
@@ -671,6 +744,159 @@ class _RescanButton extends StatelessWidget {
             Text('Rescan', style: AppStyling.bodySm),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ArchiveDropdown extends StatefulWidget {
+  final String? selectedArchive;
+  final Future<List<String>> Function() onOpen;
+  final void Function(String? archive) onSelect;
+
+  const _ArchiveDropdown({
+    required this.selectedArchive,
+    required this.onOpen,
+    required this.onSelect,
+  });
+
+  @override
+  State<_ArchiveDropdown> createState() => _ArchiveDropdownState();
+}
+
+// Sentinel wrapper so `showMenu<_ArchiveChoice>` can distinguish "user picked
+// Current (value: null)" from "user dismissed the menu without choosing".
+class _ArchiveChoice {
+  final String? archive;
+
+  const _ArchiveChoice(this.archive);
+}
+
+class _ArchiveDropdownState extends State<_ArchiveDropdown> {
+  bool _menuOpen = false;
+
+  Future<void> _showMenu() async {
+    if (_menuOpen) return;
+    _menuOpen = true;
+
+    final box = context.findRenderObject() as RenderBox;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        box.localToGlobal(Offset(0, box.size.height), ancestor: overlay),
+        box.localToGlobal(box.size.bottomRight(Offset.zero), ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final menuShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppStyling.radiusMd),
+      side: const BorderSide(color: AppColors.border),
+    );
+
+    // Show a "Loading…" menu while we re-scan issues/archive/.
+    final loadingFuture = showMenu<_ArchiveChoice>(
+      context: context,
+      position: position,
+      color: AppColors.surfaceRaised,
+      shape: menuShape,
+      items: const [
+        PopupMenuItem<_ArchiveChoice>(enabled: false, child: Text('Loading…')),
+      ],
+    );
+
+    final archives = await widget.onOpen();
+    if (!mounted) {
+      _menuOpen = false;
+      return;
+    }
+    Navigator.of(context).pop();
+    await loadingFuture;
+    if (!mounted) {
+      _menuOpen = false;
+      return;
+    }
+
+    final selected = await showMenu<_ArchiveChoice>(
+      context: context,
+      position: position,
+      color: AppColors.surfaceRaised,
+      shape: menuShape,
+      items: [
+        const PopupMenuItem<_ArchiveChoice>(
+          value: _ArchiveChoice(null),
+          child: Text('Current'),
+        ),
+        for (final archive in archives)
+          PopupMenuItem<_ArchiveChoice>(
+            value: _ArchiveChoice(archive),
+            child: Text(archive),
+          ),
+      ],
+    );
+
+    _menuOpen = false;
+    if (selected != null && mounted) {
+      widget.onSelect(selected.archive);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _showMenu,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppStyling.spaceMd,
+          vertical: AppStyling.spaceSm,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(AppStyling.radiusMd),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.archive_outlined,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: AppStyling.spaceXs),
+            Text(widget.selectedArchive ?? 'Current', style: AppStyling.bodySm),
+            const SizedBox(width: AppStyling.spaceXs),
+            const Icon(
+              Icons.arrow_drop_down,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReadOnlyBadge extends StatelessWidget {
+  const _ReadOnlyBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppStyling.spaceMd,
+        vertical: AppStyling.spaceXs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppStyling.radiusSm),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Text(
+        'Read-only',
+        style: AppStyling.bodySm.copyWith(color: AppColors.textSecondary),
       ),
     );
   }

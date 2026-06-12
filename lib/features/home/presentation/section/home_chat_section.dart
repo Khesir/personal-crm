@@ -48,7 +48,7 @@ class HomeChatSection extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.all(AppStyling.spaceLg),
                   child: Composer(
-                    activeModel: state.activeModel,
+                    activeModel: state.activeEntry?.model,
                     isStreaming: state.isStreaming,
                     onSend: controller.sendMessage,
                   ),
@@ -84,9 +84,9 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(width: AppStyling.spaceMd),
           ModelSwitcher(
-            models: state.availableModels,
-            activeModel: state.activeModel,
-            onSelect: controller.selectModel,
+            entries: state.cookbook,
+            activeEntry: state.activeEntry,
+            onSelect: controller.selectEntry,
           ),
         ],
       ),
@@ -129,10 +129,10 @@ class _EmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Local assistant', style: AppStyling.displayMd),
+              Text('Assistant', style: AppStyling.displayMd),
               const SizedBox(height: AppStyling.spaceSm),
               Text(
-                'Chat privately with a local Ollama model. Nothing leaves this machine.',
+                'Chat with your configured models — local or API.',
                 textAlign: TextAlign.center,
                 style: AppStyling.pageSub,
               ),
@@ -151,7 +151,7 @@ class _EmptyState extends StatelessWidget {
               ),
               const SizedBox(height: AppStyling.spaceXl),
               Composer(
-                activeModel: state.activeModel,
+                activeModel: state.activeEntry?.model,
                 isStreaming: state.isStreaming,
                 onSend: controller.sendMessage,
               ),

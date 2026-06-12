@@ -1,17 +1,18 @@
 import '../../domain/model/chat_conversation.dart';
+import '../../domain/model/cookbook_entry.dart';
 
 class ChatStateData {
   final List<ChatConversation> conversations;
   final String? activeConversationId;
-  final List<String> availableModels;
-  final String? activeModel;
+  final List<CookbookEntry> cookbook;
+  final CookbookEntry? activeEntry;
   final bool isStreaming;
 
   const ChatStateData({
     this.conversations = const [],
     this.activeConversationId,
-    this.availableModels = const [],
-    this.activeModel,
+    this.cookbook = const [],
+    this.activeEntry,
     this.isStreaming = false,
   });
 
@@ -27,8 +28,9 @@ class ChatStateData {
     List<ChatConversation>? conversations,
     String? activeConversationId,
     bool clearActiveConversationId = false,
-    List<String>? availableModels,
-    String? activeModel,
+    List<CookbookEntry>? cookbook,
+    CookbookEntry? activeEntry,
+    bool clearActiveEntry = false,
     bool? isStreaming,
   }) {
     return ChatStateData(
@@ -36,8 +38,8 @@ class ChatStateData {
       activeConversationId: clearActiveConversationId
           ? null
           : (activeConversationId ?? this.activeConversationId),
-      availableModels: availableModels ?? this.availableModels,
-      activeModel: activeModel ?? this.activeModel,
+      cookbook: cookbook ?? this.cookbook,
+      activeEntry: clearActiveEntry ? null : (activeEntry ?? this.activeEntry),
       isStreaming: isStreaming ?? this.isStreaming,
     );
   }
