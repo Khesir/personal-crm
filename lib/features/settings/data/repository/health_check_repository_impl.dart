@@ -29,6 +29,14 @@ class HealthCheckRepositoryImpl implements HealthCheckRepository {
             'anthropic-version': '2023-06-01',
           },
         );
+      case ServiceType.groq:
+      case ServiceType.gemini:
+      case ServiceType.openRouter:
+      case ServiceType.openai:
+      case ServiceType.deepSeek:
+      case ServiceType.mistral:
+      case ServiceType.nvidia:
+      case ServiceType.openCodeZen:
       case ServiceType.customApi:
         final baseUrl = card.fields['baseUrl'];
         final apiKey = card.fields['apiKey'];

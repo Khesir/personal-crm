@@ -23,7 +23,16 @@ ChatModelRepository _repositoryFor(ServiceCard card) {
   return switch (card.type) {
     ServiceType.ollama => OllamaRepositoryImpl(OllamaDatasource(baseDio)),
     ServiceType.customLocal => OpenAiCompatibleRepositoryImpl(OpenAiCompatibleDatasource(baseDio)),
-    ServiceType.customApi => OpenAiCompatibleRepositoryImpl(OpenAiCompatibleDatasource(Dio(BaseOptions(
+    ServiceType.customApi ||
+    ServiceType.groq ||
+    ServiceType.gemini ||
+    ServiceType.openRouter ||
+    ServiceType.openai ||
+    ServiceType.deepSeek ||
+    ServiceType.mistral ||
+    ServiceType.nvidia ||
+    ServiceType.openCodeZen =>
+      OpenAiCompatibleRepositoryImpl(OpenAiCompatibleDatasource(Dio(BaseOptions(
         baseUrl: card.fields['baseUrl'] ?? '',
         connectTimeout: const Duration(seconds: 10),
         contentType: 'application/json',

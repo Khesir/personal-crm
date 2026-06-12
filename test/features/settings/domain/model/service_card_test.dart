@@ -78,11 +78,11 @@ void main() {
   });
 
   group('ServiceType', () {
-    test('value/fromValue round trip for all six types', () {
+    test('value/fromValue round trip for all fourteen types', () {
       for (final type in ServiceType.values) {
         expect(ServiceType.fromValue(type.value), type);
       }
-      expect(ServiceType.values, hasLength(6));
+      expect(ServiceType.values, hasLength(14));
     });
   });
 }

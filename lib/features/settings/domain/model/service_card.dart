@@ -22,7 +22,15 @@ enum ServiceType {
   claudeAnthropic,
   customApi,
   n8n,
-  customUrl;
+  customUrl,
+  groq,
+  gemini,
+  openRouter,
+  openai,
+  deepSeek,
+  mistral,
+  nvidia,
+  openCodeZen;
 
   String get value => switch (this) {
         ServiceType.ollama => 'ollama',
@@ -31,6 +39,14 @@ enum ServiceType {
         ServiceType.customApi => 'customApi',
         ServiceType.n8n => 'n8n',
         ServiceType.customUrl => 'customUrl',
+        ServiceType.groq => 'groq',
+        ServiceType.gemini => 'gemini',
+        ServiceType.openRouter => 'open_router',
+        ServiceType.openai => 'openai',
+        ServiceType.deepSeek => 'deep_seek',
+        ServiceType.mistral => 'mistral',
+        ServiceType.nvidia => 'nvidia',
+        ServiceType.openCodeZen => 'open_code_zen',
       };
 
   static ServiceType fromValue(String value) => switch (value) {
@@ -39,6 +55,14 @@ enum ServiceType {
         'customApi' => ServiceType.customApi,
         'n8n' => ServiceType.n8n,
         'customUrl' => ServiceType.customUrl,
+        'groq' => ServiceType.groq,
+        'gemini' => ServiceType.gemini,
+        'open_router' => ServiceType.openRouter,
+        'openai' => ServiceType.openai,
+        'deep_seek' => ServiceType.deepSeek,
+        'mistral' => ServiceType.mistral,
+        'nvidia' => ServiceType.nvidia,
+        'open_code_zen' => ServiceType.openCodeZen,
         _ => ServiceType.ollama,
       };
 }

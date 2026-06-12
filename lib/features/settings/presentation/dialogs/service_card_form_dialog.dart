@@ -13,6 +13,7 @@ import 'package:crm/features/home/data/repository/openai_compatible_repository_i
 import 'package:crm/features/home/domain/repository/chat_model_repository.dart';
 import '../../domain/controller/service_cards_controller.dart';
 import '../../domain/model/service_card.dart';
+import '../../domain/model/service_type_metadata.dart';
 
 const _kDialogWidth = 480.0;
 
@@ -27,7 +28,16 @@ ChatModelRepository _repositoryForCard(ServiceCard card) {
   return switch (card.type) {
     ServiceType.ollama => OllamaRepositoryImpl(OllamaDatasource(baseDio)),
     ServiceType.customLocal => OpenAiCompatibleRepositoryImpl(OpenAiCompatibleDatasource(baseDio)),
-    ServiceType.customApi => OpenAiCompatibleRepositoryImpl(OpenAiCompatibleDatasource(Dio(BaseOptions(
+    ServiceType.customApi ||
+    ServiceType.groq ||
+    ServiceType.gemini ||
+    ServiceType.openRouter ||
+    ServiceType.openai ||
+    ServiceType.deepSeek ||
+    ServiceType.mistral ||
+    ServiceType.nvidia ||
+    ServiceType.openCodeZen =>
+      OpenAiCompatibleRepositoryImpl(OpenAiCompatibleDatasource(Dio(BaseOptions(
         baseUrl: card.fields['baseUrl'] ?? '',
         connectTimeout: const Duration(seconds: 10),
         contentType: 'application/json',
@@ -84,31 +94,44 @@ class _ServiceCardFormDialogState extends State<ServiceCardFormDialog> {
   bool get _showBaseUrlField => widget.type != ServiceType.claudeAnthropic;
 
   bool get _showApiKeyField =>
-      widget.type == ServiceType.claudeAnthropic || widget.type == ServiceType.customApi;
+      widget.type == ServiceType.claudeAnthropic ||
+      widget.type == ServiceType.customApi ||
+      widget.type == ServiceType.groq ||
+      widget.type == ServiceType.gemini ||
+      widget.type == ServiceType.openRouter ||
+      widget.type == ServiceType.openai ||
+      widget.type == ServiceType.deepSeek ||
+      widget.type == ServiceType.mistral ||
+      widget.type == ServiceType.nvidia ||
+      widget.type == ServiceType.openCodeZen;
 
   bool get _isLocalLlmType =>
       widget.type == ServiceType.ollama || widget.type == ServiceType.customLocal;
 
   bool get _isApiLlmType =>
-      widget.type == ServiceType.claudeAnthropic || widget.type == ServiceType.customApi;
+      widget.type == ServiceType.claudeAnthropic ||
+      widget.type == ServiceType.customApi ||
+      widget.type == ServiceType.groq ||
+      widget.type == ServiceType.gemini ||
+      widget.type == ServiceType.openRouter ||
+      widget.type == ServiceType.openai ||
+      widget.type == ServiceType.deepSeek ||
+      widget.type == ServiceType.mistral ||
+      widget.type == ServiceType.nvidia ||
+      widget.type == ServiceType.openCodeZen;
 
   bool get _showModelChecklist => _isEditing && (_isLocalLlmType || _isApiLlmType);
 
-  String get _typeLabel => switch (widget.type) {
-        ServiceType.ollama => 'Ollama',
-        ServiceType.customLocal => 'Custom Local',
-        ServiceType.claudeAnthropic => 'Claude (Anthropic)',
-        ServiceType.customApi => 'Custom API',
-        ServiceType.n8n => 'n8n',
-        ServiceType.customUrl => 'Custom URL',
-      };
+  String get _typeLabel => kServiceTypeLabels[widget.type]!;
 
   @override
   void initState() {
     super.initState();
     final card = widget.card;
     _nameCtrl = TextEditingController(text: card?.name ?? _typeLabel);
-    _baseUrlCtrl = TextEditingController(text: card?.fields['baseUrl'] ?? '');
+    final defaultBaseUrl =
+        card == null && _showBaseUrlField ? kServiceTypeDefaultBaseUrls[widget.type] : null;
+    _baseUrlCtrl = TextEditingController(text: card?.fields['baseUrl'] ?? defaultBaseUrl ?? '');
     _secretCtrl = TextEditingController(text: card?.fields['secret'] ?? '');
     _apiKeyCtrl = TextEditingController(text: card?.fields['apiKey'] ?? '');
 

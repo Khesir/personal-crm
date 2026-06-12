@@ -1,6 +1,6 @@
 # Kanban Board
 
-_Last updated: 2026-06-13 (007 and 008 approved -> done)_
+_Last updated: 2026-06-13_
 
 ---
 
@@ -33,6 +33,11 @@ Implementation done. Tests pass. Waiting for review.
 
 | Issue | Title | Type | Priority |
 |-------|-------|------|----------|
+| [001](qa/001-groq-first-new-api-llm-provider.md) | Groq as the first new API LLM provider (tracer bullet) | AFK | P1 |
+| [003](qa/003-huggingface-search-and-hardware-bar.md) | Search Hugging Face — results table + hardware detection bar | AFK | P1 |
+| [002](qa/002-remaining-api-llm-providers.md) | Remaining 7 API LLM providers (Gemini, OpenRouter, OpenAI, DeepSeek, Mistral, NVIDIA, OpenCode Zen) | AFK | P2 |
+| [004](qa/004-hardware-fit-scoring.md) | Hardware-fit scoring (VRAM/SPEED/SCORE/FIT/MODE columns) | AFK | P2 |
+| [005](qa/005-ollama-download-with-progress.md) | One-click download into Ollama with progress | AFK | P2 |
 
 ---
 
@@ -41,11 +46,3 @@ Approved and complete.
 
 | Issue | Title | Type | Priority |
 |-------|-------|------|----------|
-| [001](done/001-archive-board-listing-and-switching.md) | Archive board listing & switching (board view) | AFK | P1 |
-| [002](done/002-read-only-issue-detail-for-archives.md) | Read-only issue detail for archived boards | AFK | P2 |
-| [003](done/003-service-cards-foundation-and-services-category.md) | Service cards foundation + Services category (n8n & Custom URL) | AFK | P1 |
-| [004](done/004-service-cards-cache-env-removal-and-migration.md) | Service cards cache, .env removal, and migration | AFK | P2 |
-| [005](done/005-local-llm-category-cards.md) | Local LLM category cards (Ollama & Custom Local) | AFK | P1 |
-| [006](done/006-api-llm-category-cards.md) | API LLM category cards (Claude Anthropic & Custom API) | AFK | P2 |
-| [007](done/007-local-model-cookbook.md) | Local model cookbook (multi-card picker, routing & curation) | AFK | P1 |
-| [008](done/008-api-llm-cookbook-integration.md) | API LLM cookbook integration (Claude Anthropic & Custom API in Home chat) | AFK | P2 |

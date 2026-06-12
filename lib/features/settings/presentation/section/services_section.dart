@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
+import '../../di.dart';
 import '../../domain/controller/service_cards_controller.dart';
 import '../../domain/model/health_status.dart';
 import '../../domain/model/service_card.dart';
+import '../../domain/model/service_type_metadata.dart';
+import '../dialogs/huggingface_search_dialog.dart';
 import '../dialogs/service_card_form_dialog.dart';
 
 class ServicesSection extends StatefulWidget {
@@ -50,7 +53,18 @@ class _ServicesSectionState extends State<ServicesSection> {
             title: 'API LLM',
             category: ServiceCategory.apiLlm,
             controller: widget.controller,
-            availableTypes: const [ServiceType.claudeAnthropic, ServiceType.customApi],
+            availableTypes: const [
+              ServiceType.claudeAnthropic,
+              ServiceType.customApi,
+              ServiceType.groq,
+              ServiceType.gemini,
+              ServiceType.openRouter,
+              ServiceType.openai,
+              ServiceType.deepSeek,
+              ServiceType.mistral,
+              ServiceType.nvidia,
+              ServiceType.openCodeZen,
+            ],
           ),
           const SizedBox(height: AppStyling.spaceXxl),
           _CategorySection(
@@ -110,6 +124,15 @@ class _CategorySection extends StatelessWidget {
     );
   }
 
+  Future<void> _openHuggingFaceSearch(BuildContext context) async {
+    final discoveryController = createModelDiscoveryController(controller.data ?? const []);
+    await showDialog(
+      context: context,
+      builder: (_) => HuggingFaceSearchDialog(controller: discoveryController),
+    );
+    discoveryController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -120,6 +143,30 @@ class _CategorySection extends StatelessWidget {
             Expanded(
               child: Text(title, style: AppStyling.headingLg),
             ),
+            if (category == ServiceCategory.localLlm) ...[
+              GestureDetector(
+                onTap: () => _openHuggingFaceSearch(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppStyling.spaceLg,
+                    vertical: AppStyling.spaceSm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceRaised,
+                    borderRadius: BorderRadius.circular(AppStyling.radiusMd),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    'Search Hugging Face',
+                    style: AppStyling.bodySm.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppStyling.spaceMd),
+            ],
             GestureDetector(
               onTap: () => _openAddFlow(context),
               child: Container(
@@ -194,14 +241,7 @@ class _TypePickerDialog extends StatelessWidget {
 
   const _TypePickerDialog({required this.types});
 
-  String _label(ServiceType type) => switch (type) {
-        ServiceType.ollama => 'Ollama',
-        ServiceType.customLocal => 'Custom Local (OpenAI-compatible)',
-        ServiceType.claudeAnthropic => 'Claude (Anthropic)',
-        ServiceType.customApi => 'Custom API',
-        ServiceType.n8n => 'n8n',
-        ServiceType.customUrl => 'Custom URL',
-      };
+  String _label(ServiceType type) => kServiceTypeLabels[type]!;
 
   @override
   Widget build(BuildContext context) {
@@ -253,14 +293,7 @@ class _ServiceCard extends StatelessWidget {
     required this.onToggleEnabled,
   });
 
-  String get _typeLabel => switch (card.type) {
-        ServiceType.ollama => 'Ollama',
-        ServiceType.customLocal => 'Custom Local (OpenAI-compatible)',
-        ServiceType.claudeAnthropic => 'Claude (Anthropic)',
-        ServiceType.customApi => 'Custom API',
-        ServiceType.n8n => 'n8n',
-        ServiceType.customUrl => 'Custom URL',
-      };
+  String get _typeLabel => kServiceTypeLabels[card.type]!;
 
   @override
   Widget build(BuildContext context) {
