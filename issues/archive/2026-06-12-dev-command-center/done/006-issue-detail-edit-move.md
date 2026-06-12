@@ -1,3 +1,12 @@
+---
+id: issue-006
+title: "Issue detail: view, edit, move, acceptance criteria"
+feature: kanban
+status: done
+created_at: 2026-06-11
+tags: [afk, p1]
+---
+
 # [006] Issue detail: view, edit, move, acceptance criteria
 
 **Type:** AFK
@@ -67,3 +76,4 @@ flips the right line by index.
 - Tested via `flutter test` (22 new tests: checklist toggle, acceptance-criteria parsing, frontmatter
   writer, repository `updateIssue`/`moveIssue`, controller integration — 51/51 total pass) and
   `flutter analyze` (0 new issues).
+- QA approved by user on 2026-06-12.

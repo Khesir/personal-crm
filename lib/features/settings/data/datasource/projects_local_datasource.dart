@@ -1,8 +1,9 @@
 import 'dart:convert';
 
+import 'package:crm/core/config/data_namespace.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const kProjectsPrefsKey = 'settings.projects';
+const kProjectsPrefsKey = '$kDataNamespace.settings.projects';
 
 class ProjectsLocalDatasource {
   final SharedPreferences prefs;

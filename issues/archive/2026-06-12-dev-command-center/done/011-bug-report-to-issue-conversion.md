@@ -1,3 +1,12 @@
+---
+id: issue-011
+title: "Bug Report → Issue conversion (both paths)"
+feature: projects
+status: done
+created_at: 2026-06-11
+tags: [afk, p3]
+---
+
 # [011] Bug Report → Issue conversion (both paths)
 
 **Type:** AFK
@@ -50,3 +59,5 @@ Yes — unit tests for the bug-report → `Issue` field mapping (title/body/tags
 - Wired "Convert to issue" into `BugDetailSection`'s action row, threading `issuesController`/`project`/`onRunSkill` from `app_shell_screen.dart` through `BugReportsSection`; "Write .md directly" shows a snackbar confirmation, "Generate with Claude Code" opens the issue-010 full-takeover overlay with `create-issue-from-bug`.
 - Tests: unit tests for `mapBugReportToIssue` (with/without stack trace), an `IssuesController.createIssue` test against the extended `FakeIssuesRepository`, and a real-filesystem `IssuesRepositoryImpl.createIssue` test asserting the file lands in `issues/backlog/` and round-trips via `getIssues`.
 - `flutter analyze`: 0 errors (6 pre-existing infos/warnings unchanged). `flutter test`: 72/72 passing (68 existing + 4 new).
+- QA approved by user on 2026-06-12 ("Generate with Claude Code" path requires the live n8n workflow from
+  010, deferred per external dependency).

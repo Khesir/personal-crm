@@ -1,3 +1,12 @@
+---
+id: issue-001
+title: "Shell rewrite: icon rail, contextual sidebar, dark \"Codex\" theme"
+feature: shell
+status: done
+created_at: 2026-06-11
+tags: [afk, p1]
+---
+
 # [001] Shell rewrite: icon rail, contextual sidebar, dark "Codex" theme
 
 **Type:** AFK
@@ -91,3 +100,4 @@ section.
 - Tested via `flutter test` (new `ShellController` unit tests for `selectTab`, `selectProject`,
   `selectProjectSection` all pass) and `flutter analyze` (0 errors; only pre-existing unrelated lints in
   orphaned `keep_track` files remain). Build verified via `flutter run -d windows`.
+- QA approved by user on 2026-06-12.

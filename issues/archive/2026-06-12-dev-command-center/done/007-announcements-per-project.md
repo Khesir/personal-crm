@@ -1,3 +1,12 @@
+---
+id: issue-007
+title: "Announcements (project-scoped, generalized from Keep Track)"
+feature: projects
+status: done
+created_at: 2026-06-11
+tags: [afk, p2]
+---
+
 # [007] Announcements (project-scoped, generalized from Keep Track)
 
 **Type:** AFK
@@ -60,6 +69,7 @@ flows, correct `projectKey` passed through.
 - Tested via `flutter test` (5 new `AnnouncementsController` tests covering load/create/edit/delete and
   `projectKey` scoping with `FakeAnnouncementsRepository` — 56/56 total pass) and `flutter analyze`
   (0 new issues).
+- QA approved by user on 2026-06-12.
 
 ---
 

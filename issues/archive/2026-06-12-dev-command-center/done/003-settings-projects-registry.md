@@ -1,3 +1,12 @@
+---
+id: issue-003
+title: "Settings: Projects registry (CRUD)"
+feature: settings
+status: done
+created_at: 2026-06-11
+tags: [afk, p1]
+---
+
 # [003] Settings: Projects registry (CRUD)
 
 **Type:** AFK
@@ -77,3 +86,10 @@ and collision suffixing, persistence round-trip via the fake.
   issue; confirm this is the intended default.
 - `ProjectsRepositoryImpl` re-seeds `personal-crm` whenever the stored project list is empty, including
   after a user explicitly deletes it. A "seeded-once" flag may be preferable if that's unwanted.
+
+---
+
+## Log (cont.)
+
+- QA approved by user on 2026-06-12, despite the known hardcoded seed path and re-seed-on-delete issues
+  noted above (accepted as-is for now).

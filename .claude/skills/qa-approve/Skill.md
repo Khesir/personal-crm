@@ -16,12 +16,14 @@ Usage:
 2. Append to the issue file's Log section:
    `QA approved by user on [date].`
 
-3. Physically move the file from `issues/qa/` to `issues/done/`
+3. Update the issue file's frontmatter `status: done`
 
-4. Update `issues/kanban.md` — move the issue from QA to Done.
+4. Physically move the file from `issues/qa/` to `issues/done/`
+
+5. Update `issues/kanban.md` — move the issue from QA to Done.
    Update _Last updated_ date.
 
-5. Tell the user: issue NNN moved to done/.
+6. Tell the user: issue NNN moved to done/.
 
 Then stop.
 
@@ -33,6 +35,7 @@ Then stop.
 
 2. For each file in `issues/qa/`:
    - Append to the Log section: `QA approved by user on [date].`
+   - Update the file's frontmatter `status: done`
    - Physically move the file to `issues/done/`
 
 3. Update `issues/kanban.md`:

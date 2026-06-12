@@ -1,3 +1,12 @@
+---
+id: issue-008
+title: "Bug Reports inbox & detail (resolve/delete)"
+feature: projects
+status: done
+created_at: 2026-06-11
+tags: [afk, p2]
+---
+
 # [008] Bug Reports inbox & detail (resolve/delete)
 
 **Type:** AFK
@@ -62,3 +71,5 @@ Yes — `BugReportsController` unit tests with `FakeBugReportsRepository`: load/
   (only rendered when `project.hasBugReports`).
 - Verified: `flutter analyze` clean, `flutter test` passes including `BugReportsController` unit tests with
   `FakeBugReportsRepository` covering load/resolve/delete/filteredBySeverity. All acceptance criteria met.
+- QA approved by user on 2026-06-12 (full end-to-end verification requires the live backend bug-report
+  endpoints, deferred per external dependency).

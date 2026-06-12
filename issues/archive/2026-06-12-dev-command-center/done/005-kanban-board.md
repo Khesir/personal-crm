@@ -1,3 +1,12 @@
+---
+id: issue-005
+title: "Kanban board (read-only, per project, rescan)"
+feature: kanban
+status: done
+created_at: 2026-06-11
+tags: [afk, p1, test]
+---
+
 # [005] Kanban board (read-only, per project, rescan)
 
 **Type:** AFK
@@ -73,6 +82,7 @@ frontmatter fixtures: parsing, grouping by status, rescan reload.
 - Tested via `flutter test` (7 new tests: frontmatter parsing, missing-frontmatter skip, folder-name
   mapping, grouping, empty-folder handling, controller load/rescan — 29/29 total pass) and
   `flutter analyze` (0 new issues).
+- QA approved by user on 2026-06-12.
 
 ---
 

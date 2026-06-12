@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
 import 'package:crm/core/ui/desktop_title_bar.dart';
@@ -12,11 +13,12 @@ import '../state/shell_state.dart';
 import '../widget/app_rail.dart';
 import '../widget/app_sidebar.dart';
 
-typedef RunSkillCallback = void Function({
-  required AgentSkill skill,
-  required Project project,
-  Map<String, dynamic>? context,
-});
+typedef RunSkillCallback =
+    void Function({
+      required AgentSkill skill,
+      required Project project,
+      Map<String, dynamic>? context,
+    });
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -96,54 +98,56 @@ class _AppShellScreenState extends State<AppShellScreen> {
   @override
   Widget build(BuildContext context) {
     final activeRun = _activeAgentRun;
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              const DesktopTitleBar(),
-              Container(height: 1, color: AppColors.border),
-              Expanded(
-                child: Row(
-                  children: [
-                    AppRail(controller: _controller),
-                    Container(width: 1, color: AppColors.border),
-                    AppSidebar(controller: _controller),
-                    Container(width: 1, color: AppColors.border),
-                    Expanded(
-                      child: StreamBuilder<ShellStateData>(
-                        stream: _controller.stream,
-                        initialData: _controller.state,
-                        builder: (context, snapshot) {
-                          final shellState = snapshot.data!;
-                          return _ContentArea(
-                            shellState: shellState,
-                            controller: _controller,
-                            onRunSkill: _onRunSkill,
-                          );
-                        },
+    return DragToResizeArea(
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                const DesktopTitleBar(),
+                Container(height: 1, color: AppColors.border),
+                Expanded(
+                  child: Row(
+                    children: [
+                      AppRail(controller: _controller),
+                      Container(width: 1, color: AppColors.border),
+                      AppSidebar(controller: _controller),
+                      Container(width: 1, color: AppColors.border),
+                      Expanded(
+                        child: StreamBuilder<ShellStateData>(
+                          stream: _controller.stream,
+                          initialData: _controller.state,
+                          builder: (context, snapshot) {
+                            final shellState = snapshot.data!;
+                            return _ContentArea(
+                              shellState: shellState,
+                              controller: _controller,
+                              onRunSkill: _onRunSkill,
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (activeRun != null && _showAgentRunOverlay)
+              Positioned.fill(
+                child: AgentRunScreen(
+                  controller: activeRun,
+                  onRunInBackground: _onRunInBackground,
+                  onViewBoard: _onViewBoard,
                 ),
               ),
-            ],
-          ),
-          if (activeRun != null && _showAgentRunOverlay)
-            Positioned.fill(
-              child: AgentRunScreen(
+            if (activeRun != null)
+              AgentRunIndicator(
                 controller: activeRun,
-                onRunInBackground: _onRunInBackground,
-                onViewBoard: _onViewBoard,
+                onTap: _onReopenAgentRun,
               ),
-            ),
-          if (activeRun != null)
-            AgentRunIndicator(
-              controller: activeRun,
-              onTap: _onReopenAgentRun,
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -165,11 +169,13 @@ class _ContentArea extends StatelessWidget {
     return switch (shellState.selectedTab) {
       AppTab.home => const _HomePlaceholder(),
       AppTab.projects => _ProjectsPlaceholder(
-          shellState: shellState,
-          controller: controller,
-          onRunSkill: onRunSkill,
-        ),
-      AppTab.settings => _SettingsContent(section: shellState.selectedSettingsSection),
+        shellState: shellState,
+        controller: controller,
+        onRunSkill: onRunSkill,
+      ),
+      AppTab.settings => _SettingsContent(
+        section: shellState.selectedSettingsSection,
+      ),
     };
   }
 }
@@ -409,43 +415,65 @@ class _ProjectsContentState extends State<_ProjectsContent> {
           if (!showingIssueDetail)
             Padding(
               padding: const EdgeInsets.all(AppStyling.spaceXl),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(project?.name ?? 'Projects', style: AppStyling.pageTitle),
-                      const SizedBox(height: AppStyling.spaceXs),
-                      Text(
-                        project == null
-                            ? 'Select a project to see its kanban board.'
-                            : 'Manage this project\'s work.',
-                        style: AppStyling.pageSub,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              project?.name ?? 'Projects',
+                              style: AppStyling.pageTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: AppStyling.spaceXs),
+                            Text(
+                              project == null
+                                  ? 'Select a project to see its kanban board.'
+                                  : 'Manage this project\'s work.',
+                              style: AppStyling.pageSub,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
+                      if (project != null)
+                        _ProjectSectionSwitcher(
+                          project: project,
+                          selected: shellState.selectedProjectSection,
+                          onSelect: controller.selectProjectSection,
+                        ),
                     ],
                   ),
-                  const Spacer(),
                   if (project != null &&
-                      shellState.selectedProjectSection == ProjectSection.kanban) ...[
-                    _RescanButton(onPressed: _rescan),
-                    const SizedBox(width: AppStyling.spaceMd),
-                    _RunSkillButton(onPressed: () => _runSkill(context)),
-                    const SizedBox(width: AppStyling.spaceMd),
-                  ],
-                  if (project != null)
-                    _ProjectSectionSwitcher(
-                      project: project,
-                      selected: shellState.selectedProjectSection,
-                      onSelect: controller.selectProjectSection,
+                      shellState.selectedProjectSection ==
+                          ProjectSection.kanban) ...[
+                    const SizedBox(height: AppStyling.spaceMd),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _RescanButton(onPressed: _rescan),
+                        const SizedBox(width: AppStyling.spaceMd),
+                        _RunSkillButton(onPressed: () => _runSkill(context)),
+                      ],
                     ),
+                  ],
                 ],
               ),
             ),
           Expanded(
             child: project == null
                 ? Center(
-                    child: Text('No project selected.', style: AppStyling.bodySm),
+                    child: Text(
+                      'No project selected.',
+                      style: AppStyling.bodySm,
+                    ),
                   )
                 : _ProjectSectionContent(
                     section: shellState.selectedProjectSection,
@@ -492,28 +520,33 @@ class _ProjectSectionContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (section) {
       ProjectSection.kanban => _KanbanOrDetail(
-          issuesController: issuesController,
-          selectedIssueId: selectedIssueId,
-          onIssueTap: onIssueTap,
-          onCloseIssue: onCloseIssue,
-          project: project,
-          onRunSkill: onRunSkill,
-        ),
-      ProjectSection.bugReports => bugReportsController == null
-          ? Center(
-              child: Text('Loading bug reports...', style: AppStyling.bodySm),
-            )
-          : BugReportsSection(
-              controller: bugReportsController!,
-              issuesController: issuesController,
-              project: project,
-              onRunSkill: onRunSkill,
-            ),
-      ProjectSection.announcements => announcementsController == null
-          ? Center(
-              child: Text('Loading announcements...', style: AppStyling.bodySm),
-            )
-          : AnnouncementsSection(controller: announcementsController!),
+        issuesController: issuesController,
+        selectedIssueId: selectedIssueId,
+        onIssueTap: onIssueTap,
+        onCloseIssue: onCloseIssue,
+        project: project,
+        onRunSkill: onRunSkill,
+      ),
+      ProjectSection.bugReports =>
+        bugReportsController == null
+            ? Center(
+                child: Text('Loading bug reports...', style: AppStyling.bodySm),
+              )
+            : BugReportsSection(
+                controller: bugReportsController!,
+                issuesController: issuesController,
+                project: project,
+                onRunSkill: onRunSkill,
+              ),
+      ProjectSection.announcements =>
+        announcementsController == null
+            ? Center(
+                child: Text(
+                  'Loading announcements...',
+                  style: AppStyling.bodySm,
+                ),
+              )
+            : AnnouncementsSection(controller: announcementsController!),
     };
   }
 }
@@ -539,7 +572,10 @@ class _KanbanOrDetail extends StatelessWidget {
   Widget build(BuildContext context) {
     final issueId = selectedIssueId;
     if (issueId == null) {
-      return KanbanSection(controller: issuesController, onIssueTap: onIssueTap);
+      return KanbanSection(
+        controller: issuesController,
+        onIssueTap: onIssueTap,
+      );
     }
 
     return AsyncStreamBuilder<List<Issue>>(
@@ -594,7 +630,11 @@ class _RunSkillButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.smart_toy_outlined, size: 16, color: AppColors.textSecondary),
+            const Icon(
+              Icons.smart_toy_outlined,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
             const SizedBox(width: AppStyling.spaceXs),
             Text('Run skill', style: AppStyling.bodySm),
           ],
@@ -639,7 +679,8 @@ class _RescanButton extends StatelessWidget {
 class _ProjectSectionSwitcher extends StatelessWidget {
   final Project project;
   final ProjectSection selected;
-  final void Function(ProjectSection, {Set<ProjectSection>? enabledSections}) onSelect;
+  final void Function(ProjectSection, {Set<ProjectSection>? enabledSections})
+  onSelect;
 
   const _ProjectSectionSwitcher({
     required this.project,
@@ -648,10 +689,10 @@ class _ProjectSectionSwitcher extends StatelessWidget {
   });
 
   Set<ProjectSection> get _enabledSections => {
-        ProjectSection.kanban,
-        if (project.hasBugReports) ProjectSection.bugReports,
-        if (project.hasAnnouncements) ProjectSection.announcements,
-      };
+    ProjectSection.kanban,
+    if (project.hasBugReports) ProjectSection.bugReports,
+    if (project.hasAnnouncements) ProjectSection.announcements,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -684,7 +725,11 @@ class _Pill extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _Pill({required this.label, required this.selected, required this.onTap});
+  const _Pill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {

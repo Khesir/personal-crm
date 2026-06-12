@@ -84,9 +84,27 @@ Name each file: `NNN-short-name.md` (zero-padded number, lowercase hyphenated na
 
 Publish issues in dependency order (blockers first) so you can reference real issue numbers in the "Blocked by" field.
 
+Each file starts with YAML frontmatter (consumed by Dev Command Center-style kanban boards that read this repo's `issues/` folder):
+
+- `id`: `issue-NNN` (matches the file's number)
+- `title`: the issue title, quoted
+- `feature`: a short slug grouping this issue with related work (e.g. `kanban`, `settings`, `auth`)
+- `status`: matches the starting folder — `ready` or `backlog`
+- `created_at`: today's date (`YYYY-MM-DD`)
+- `tags`: `[afk, p1]` / `[hitl, p2]` etc. — lowercase type and priority
+
 Use this template:
 
 <issue-template>
+
+---
+id: issue-NNN
+title: "[Issue Title]"
+feature: [feature-slug]
+status: ready / backlog
+created_at: YYYY-MM-DD
+tags: [afk/hitl, p1/p2/p3]
+---
 
 # [NNN] [Issue Title]
 

@@ -1,8 +1,9 @@
 import 'dart:convert';
 
+import 'package:crm/core/config/data_namespace.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const kChatConversationsPrefsKey = 'home.conversations';
+const kChatConversationsPrefsKey = '$kDataNamespace.home.conversations';
 
 class ChatLocalDatasource {
   final SharedPreferences prefs;

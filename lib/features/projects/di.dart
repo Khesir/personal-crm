@@ -8,8 +8,8 @@ import 'domain/controller/announcements_controller.dart';
 import 'domain/controller/bug_reports_controller.dart';
 
 AnnouncementsController createAnnouncementsController(String projectKey) {
-  final baseUrl = dotenv.env['DEVCENTER_BACKEND_URL']!;
-  final crmSecret = dotenv.env['CRM_SECRET']!;
+  final baseUrl = dotenv.env['DEVCENTER_BACKEND_URL'] ?? '';
+  final crmSecret = dotenv.env['CRM_SECRET'];
   final dio = BaseApi.create(baseUrl: baseUrl, crmSecret: crmSecret);
   final datasource = AnnouncementsDatasource(dio, projectKey);
   final repository = AnnouncementsRepositoryImpl(datasource);
@@ -17,8 +17,8 @@ AnnouncementsController createAnnouncementsController(String projectKey) {
 }
 
 BugReportsController createBugReportsController(String projectKey) {
-  final baseUrl = dotenv.env['DEVCENTER_BACKEND_URL']!;
-  final crmSecret = dotenv.env['CRM_SECRET']!;
+  final baseUrl = dotenv.env['DEVCENTER_BACKEND_URL'] ?? '';
+  final crmSecret = dotenv.env['CRM_SECRET'];
   final dio = BaseApi.create(baseUrl: baseUrl, crmSecret: crmSecret);
   final datasource = BugReportsDatasource(dio, projectKey);
   final repository = BugReportsRepositoryImpl(datasource);

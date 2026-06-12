@@ -1,3 +1,12 @@
+---
+id: issue-009
+title: "Home: local Ollama chat"
+feature: home
+status: done
+created_at: 2026-06-11
+tags: [afk, p1]
+---
+
 # [009] Home: local Ollama chat
 
 **Type:** AFK
@@ -71,6 +80,8 @@ list management (create/select), persistence round-trip.
 - Tested via `flutter test` (7 new `ChatController` tests covering streaming token accumulation,
   generating-indicator transitions, model list/switch, conversation create/select, and persistence
   round-trip — 22/22 total pass) and `flutter analyze` (0 new issues).
+- QA approved by user on 2026-06-12 (full end-to-end verification requires a local Ollama instance,
+  deferred per external dependency).
 
 ---
 

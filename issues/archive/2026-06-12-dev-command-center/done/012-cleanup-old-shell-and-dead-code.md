@@ -1,3 +1,12 @@
+---
+id: issue-012
+title: "Cleanup: remove old tabs, screens, and dead color tokens"
+feature: cleanup
+status: done
+created_at: 2026-06-12
+tags: [afk, p3]
+---
+
 # [012] Cleanup: remove old tabs, screens, and dead color tokens
 
 **Type:** AFK
@@ -27,7 +36,7 @@ or replaced what depended on it.
 - [x] The `keep_track` feature folder contains only what 007 moved out of it, or is removed entirely if
       everything was moved.
 - [x] Build and analyzer run clean with no unused-import/dead-code warnings introduced by the pivot.
-- [ ] A full app walkthrough (Home / Projects / Settings, and all per-project sections) matches the
+- [x] A full app walkthrough (Home / Projects / Settings, and all per-project sections) matches the
       `Dev Command Center.html` design with no leftover old-shell visuals.
 
 ---
@@ -61,3 +70,4 @@ No — this is removal/verification of already-tested code; the existing test su
   `lib/features/projects/presentation/section/announcements_section.dart` and
   `lib/features/settings/presentation/dialogs/project_form_dialog.dart`, unrelated to this change.
 - `flutter test`: 72/72 passed.
+- QA approved by user on 2026-06-12.

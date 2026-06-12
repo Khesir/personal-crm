@@ -54,14 +54,14 @@ Repeat until `ready/`, `backlog/`, and `in-progress/` are all empty:
 
 1. Scan `issues/ready/` — collect all issue files
 2. Sort by priority: P1 first, then P2, then P3
-3. Move each file from `ready/` to `in-progress/` — physically move the file
+3. Move each file from `ready/` to `in-progress/` — physically move the file, and update its frontmatter `status: inprogress` to match
 4. Update `issues/kanban.md` to reflect the move
 5. Dispatch a sub-agent per issue in `in-progress/` (parallel where possible)
 6. Each sub-agent follows the TDD cycle below
-7. When an issue passes all tests, move the file from `in-progress/` to `qa/`
+7. When an issue passes all tests, move the file from `in-progress/` to `qa/`, and update its frontmatter `status: qa`
 8. Update `issues/kanban.md` to reflect the move
 9. Scan `issues/backlog/` — check if any blockers are now in `qa/` or `done/`
-10. Move newly unblocked issues from `backlog/` to `ready/`
+10. Move newly unblocked issues from `backlog/` to `ready/`, and update each one's frontmatter `status: ready`
 11. Update `issues/kanban.md` to reflect any moves
 12. Repeat
 

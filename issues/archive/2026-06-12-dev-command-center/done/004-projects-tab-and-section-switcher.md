@@ -1,3 +1,12 @@
+---
+id: issue-004
+title: "Projects tab: project list + section pill switcher"
+feature: projects
+status: done
+created_at: 2026-06-11
+tags: [afk, p1]
+---
+
 # [004] Projects tab: project list + section pill switcher
 
 **Type:** AFK
@@ -59,3 +68,4 @@ where selecting a section not enabled for the current project is a no-op.
   is a no-op.
 - Tested via `flutter test` (2 new `ShellController` tests for enabled-section selection and the disabled
   no-op case; 15/15 total pass) and `flutter analyze` (0 new issues).
+- QA approved by user on 2026-06-12.

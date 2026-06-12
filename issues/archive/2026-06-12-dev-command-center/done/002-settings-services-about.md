@@ -1,3 +1,12 @@
+---
+id: issue-002
+title: "Settings: Services configuration + About"
+feature: settings
+status: done
+created_at: 2026-06-11
+tags: [afk, p1]
+---
+
 # [002] Settings: Services configuration + About
 
 **Type:** AFK
@@ -62,3 +71,4 @@ new business logic to unit test.
   wired `_SettingsSidebar` + the Settings content area to it; "Projects" section is a placeholder
   for issue 003.
 - Tested via `flutter analyze` (0 new issues) and `flutter test` (all 5 tests pass).
+- QA approved by user on 2026-06-12.

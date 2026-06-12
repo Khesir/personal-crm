@@ -37,13 +37,15 @@ _To be investigated during implementation._
 3. Append to the issue file's Log section:
    `QA rejected on [date]. Bug appended — [what the user described].`
 
-4. Physically move the file from `issues/qa/` back to `issues/ready/`
+4. Update the issue file's frontmatter `status: ready`
 
-5. Update `issues/kanban.md`:
+5. Physically move the file from `issues/qa/` back to `issues/ready/`
+
+6. Update `issues/kanban.md`:
    - Move the issue from QA back to Ready
    - Update _Last updated_ date
 
-6. Tell the user:
+7. Tell the user:
    - Issue NNN moved back to ready/ with bug details appended
    - Run /implement-issues to pick it up
 

@@ -1,3 +1,12 @@
+---
+id: issue-010
+title: "Agent execution: \"Run skill\" full-takeover view"
+feature: agent-run
+status: done
+created_at: 2026-06-11
+tags: [afk, p2]
+---
+
 # [010] Agent execution: "Run skill" full-takeover view
 
 **Type:** AFK
@@ -84,3 +93,5 @@ state transitions across thinking/tool/result events, stop, and background/foreg
 - Per "Testing Decisions", no new widget tests were added (UI wiring is human-QA territory). Verified
   `flutter analyze` (0 errors; 6 pre-existing infos/warnings in unrelated `keep_track`/`projects`/`settings`
   files) and `flutter test` (68/68 passing, including all 8 `AgentRunController` tests).
+- QA approved by user on 2026-06-12 (full end-to-end verification requires a live n8n
+  `webhook/dev-command-center` workflow, deferred per external dependency).
