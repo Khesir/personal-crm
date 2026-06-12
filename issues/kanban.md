@@ -9,8 +9,6 @@ Issues with unresolved blockers.
 
 | Issue | Title | Type | Priority | Blocked by |
 |-------|-------|------|----------|------------|
-| [011](backlog/011-bug-report-to-issue-conversion.md) | Bug Report → Issue conversion (both paths) | AFK | P3 | 006, 008, 010 |
-| [012](backlog/012-cleanup-old-shell-and-dead-code.md) | Cleanup: remove old tabs, screens, and dead color tokens | AFK | P3 | 005, 006, 007, 008, 009, 010, 011 |
 
 ---
 
@@ -27,8 +25,6 @@ Currently being implemented.
 
 | Issue | Title | Type | Priority |
 |-------|-------|------|----------|
-| [008](in-progress/008-bug-reports-inbox-detail.md) | Bug Reports inbox & detail (resolve/delete) | AFK | P2 |
-| [010](in-progress/010-agent-run-full-takeover.md) | Agent execution: "Run skill" full-takeover view | AFK | P2 |
 
 ---
 
@@ -44,6 +40,11 @@ Implementation done. Tests pass. Waiting for review.
 | [005](qa/005-kanban-board.md) | Kanban board (read-only, per project, rescan) | AFK | P1 |
 | [006](qa/006-issue-detail-edit-move.md) | Issue detail: view, edit, move, acceptance criteria | AFK | P1 |
 | [007](qa/007-announcements-per-project.md) | Announcements (project-scoped, generalized from Keep Track) | AFK | P2 |
+| [008](qa/008-bug-reports-inbox-detail.md) | Bug Reports inbox & detail (resolve/delete) | AFK | P2 |
+| [009](qa/009-home-ollama-chat.md) | Home: local Ollama chat | AFK | P1 |
+| [010](qa/010-agent-run-full-takeover.md) | Agent execution: "Run skill" full-takeover view | AFK | P2 |
+| [011](qa/011-bug-report-to-issue-conversion.md) | Bug Report → Issue conversion (both paths) | AFK | P3 |
+| [012](qa/012-cleanup-old-shell-and-dead-code.md) | Cleanup: remove old tabs, screens, and dead color tokens | AFK | P3 |
 
 ---
 

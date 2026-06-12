@@ -45,6 +45,29 @@ class IssuesRepositoryImpl implements IssuesRepository {
   }
 
   @override
+  Future<Issue> createIssue(String localPath, Issue issue) async {
+    final backlogDir = Directory(
+      p.join(localPath, 'issues', _statusFolders[IssueStatus.backlog]!),
+    );
+    if (!await backlogDir.exists()) await backlogDir.create(recursive: true);
+
+    final filePath = p.join(backlogDir.path, '${issue.id}.md');
+    final contents = writer.createFileContents(issue);
+    await File(filePath).writeAsString(contents);
+
+    return Issue(
+      id: issue.id,
+      title: issue.title,
+      feature: issue.feature,
+      status: IssueStatus.backlog,
+      createdAt: issue.createdAt,
+      tags: issue.tags,
+      body: issue.body,
+      filePath: filePath,
+    );
+  }
+
+  @override
   Future<Issue> updateIssue(
     Issue issue, {
     String? title,

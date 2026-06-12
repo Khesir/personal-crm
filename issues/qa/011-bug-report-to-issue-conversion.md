@@ -41,3 +41,12 @@ Yes — unit tests for the bug-report → `Issue` field mapping (title/body/tags
 ## Notes
 
 - Adds `create-issue-from-bug` to the fixed skill list introduced in 010.
+
+---
+
+## Log
+
+- Added `mapBugReportToIssue` (`lib/features/projects/domain/helper/bug_report_to_issue.dart`), `IssuesRepository.createIssue`/`IssuesRepositoryImpl.createIssue` (via new `IssueFrontmatterWriter.createFileContents`), `IssuesController.createIssue`, `AgentSkill.createIssueFromBug` + `kPickerSkills`, and the new `BugConvertDialog`.
+- Wired "Convert to issue" into `BugDetailSection`'s action row, threading `issuesController`/`project`/`onRunSkill` from `app_shell_screen.dart` through `BugReportsSection`; "Write .md directly" shows a snackbar confirmation, "Generate with Claude Code" opens the issue-010 full-takeover overlay with `create-issue-from-bug`.
+- Tests: unit tests for `mapBugReportToIssue` (with/without stack trace), an `IssuesController.createIssue` test against the extended `FakeIssuesRepository`, and a real-filesystem `IssuesRepositoryImpl.createIssue` test asserting the file lands in `issues/backlog/` and round-trips via `getIssues`.
+- `flutter analyze`: 0 errors (6 pre-existing infos/warnings unchanged). `flutter test`: 72/72 passing (68 existing + 4 new).

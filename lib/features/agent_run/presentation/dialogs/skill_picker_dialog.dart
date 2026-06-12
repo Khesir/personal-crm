@@ -32,7 +32,7 @@ class SkillPickerDialog extends StatelessWidget {
             children: [
               Text('Run skill', style: AppStyling.headingMd),
               const SizedBox(height: AppStyling.spaceLg),
-              for (final skill in AgentSkill.values)
+              for (final skill in AgentSkill.kPickerSkills)
                 _SkillTile(
                   skill: skill,
                   onTap: () => Navigator.of(context).pop(skill),

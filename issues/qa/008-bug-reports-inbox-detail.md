@@ -51,3 +51,14 @@ Yes — `BugReportsController` unit tests with `FakeBugReportsRepository`: load/
 - Full end-to-end verification requires the reworked backend's bug-report endpoints to exist; this slice's
   automated tests use fakes.
 - The "Convert to issue" action visible in this screen's design is wired up in slice 011.
+
+---
+
+## Log
+
+- Implementation found complete from a prior session: `BugReport`/`BugSeverity`, `BugReportsRepository` +
+  HTTP impl (`BugReportsDatasource`/`BugReportsRepositoryImpl`), `BugReportsController` (load/resolve/delete/
+  filteredBySeverity), and `BugInboxSection`/`BugDetailSection` UI wired into the shell's `bugReports` pill
+  (only rendered when `project.hasBugReports`).
+- Verified: `flutter analyze` clean, `flutter test` passes including `BugReportsController` unit tests with
+  `FakeBugReportsRepository` covering load/resolve/delete/filteredBySeverity. All acceptance criteria met.

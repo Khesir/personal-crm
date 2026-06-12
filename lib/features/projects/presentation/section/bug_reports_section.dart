@@ -1,13 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:crm/core/theme/theme.dart';
 import 'package:crm/core/state/state.dart';
+import 'package:crm/features/agent_run/api.dart';
+import 'package:crm/features/kanban/api.dart';
+import 'package:crm/features/settings/api.dart';
 import '../../domain/controller/bug_reports_controller.dart';
+import '../../domain/helper/bug_report_to_issue.dart';
 import '../../domain/model/bug_report.dart';
+import '../dialogs/bug_convert_dialog.dart';
+
+typedef RunSkillCallback = void Function({
+  required AgentSkill skill,
+  required Project project,
+  Map<String, dynamic>? context,
+});
 
 class BugReportsSection extends StatefulWidget {
   final BugReportsController controller;
+  final IssuesController issuesController;
+  final Project project;
+  final RunSkillCallback onRunSkill;
 
-  const BugReportsSection({super.key, required this.controller});
+  const BugReportsSection({
+    super.key,
+    required this.controller,
+    required this.issuesController,
+    required this.project,
+    required this.onRunSkill,
+  });
 
   @override
   State<BugReportsSection> createState() => _BugReportsSectionState();
@@ -53,6 +73,9 @@ class _BugReportsSectionState extends State<BugReportsSection> {
           return BugDetailSection(
             report: report,
             controller: widget.controller,
+            issuesController: widget.issuesController,
+            project: widget.project,
+            onRunSkill: widget.onRunSkill,
             onBack: _closeDetail,
           );
         }
@@ -270,14 +293,47 @@ class _BugReportCard extends StatelessWidget {
 class BugDetailSection extends StatelessWidget {
   final BugReport report;
   final BugReportsController controller;
+  final IssuesController issuesController;
+  final Project project;
+  final RunSkillCallback onRunSkill;
   final VoidCallback onBack;
 
   const BugDetailSection({
     super.key,
     required this.report,
     required this.controller,
+    required this.issuesController,
+    required this.project,
+    required this.onRunSkill,
     required this.onBack,
   });
+
+  void _convertToIssue(BuildContext context) {
+    BugConvertDialog.show(
+      context,
+      report: report,
+      onWriteDirectly: () async {
+        await issuesController.createIssue(
+          project.localPath,
+          mapBugReportToIssue(report),
+        );
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Issue created in backlog.')),
+        );
+      },
+      onGenerateWithClaudeCode: () => onRunSkill(
+        skill: AgentSkill.createIssueFromBug,
+        project: project,
+        context: {
+          'bugReportId': report.id,
+          'message': report.message,
+          'stack': report.stackTrace,
+          'severity': report.severity.value,
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -310,6 +366,11 @@ class BugDetailSection extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              _ActionButton(
+                label: 'Convert to issue',
+                onTap: () => _convertToIssue(context),
+              ),
+              const SizedBox(width: AppStyling.spaceSm),
               if (!report.resolved) ...[
                 _ActionButton(
                   label: 'Resolve',

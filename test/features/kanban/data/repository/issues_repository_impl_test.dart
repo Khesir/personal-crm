@@ -193,5 +193,37 @@ Body text here.
       expect(reloaded, hasLength(1));
       expect(reloaded.first.status, IssueStatus.inprogress);
     });
+
+    test('createIssue() writes a new file into issues/backlog/', () async {
+      final issue = Issue(
+        id: 'bug-bug-123',
+        title: 'Crash on save',
+        feature: 'bug-report',
+        status: IssueStatus.backlog,
+        createdAt: DateTime(2026, 6, 12),
+        tags: const ['bug', 'error'],
+        body: '## Message\n\nCrash on save\n\n## Stack Trace\n\n```\nat foo()\n```',
+        filePath: '',
+      );
+
+      final created = await repository.createIssue(tempDir.path, issue);
+
+      expect(created.status, IssueStatus.backlog);
+      expect(created.filePath, contains('backlog'));
+      expect(File(created.filePath).existsSync(), isTrue);
+
+      final reloaded = await repository.getIssues(tempDir.path);
+      expect(reloaded, hasLength(1));
+      final reloadedIssue = reloaded.first;
+      expect(reloadedIssue.id, 'bug-bug-123');
+      expect(reloadedIssue.title, 'Crash on save');
+      expect(reloadedIssue.feature, 'bug-report');
+      expect(reloadedIssue.status, IssueStatus.backlog);
+      expect(reloadedIssue.createdAt, DateTime(2026, 6, 12));
+      expect(reloadedIssue.tags, ['bug', 'error']);
+      expect(reloadedIssue.body, contains('Crash on save'));
+      expect(reloadedIssue.body, contains('## Stack Trace'));
+      expect(reloadedIssue.body, contains('at foo()'));
+    });
   });
 }

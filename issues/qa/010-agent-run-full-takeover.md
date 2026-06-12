@@ -67,3 +67,20 @@ state transitions across thinking/tool/result events, stop, and background/foreg
 - Full end-to-end verification requires an n8n workflow at `N8N_BASE_URL/webhook/dev-command-center` that
   streams the documented event shape; automated tests use the fake stream.
 - The skill list is fixed in code for V1 — no dynamic discovery from n8n.
+
+---
+
+## Log
+
+- Wired `AgentRunScreen`/`AgentRunIndicator` into `AppShellScreen` as a `Stack`-based full-takeover overlay
+  (covers rail + sidebar + content), with `_activeAgentRun`/`_showAgentRunOverlay` state and handlers for
+  start/run-in-background/foreground/view-board (the latter clears the controller and routes back to
+  `AppTab.projects` + `ProjectSection.kanban` for the run's project).
+- Added a "Run skill" button to the kanban header (`_ProjectsContent`, gated to `ProjectSection.kanban`)
+  that opens `SkillPickerDialog` then starts a run, and a "Run skill" button to `IssueDetailSection`'s
+  `_DetailHeader` that starts `AgentSkill.workIssue` with `{'issueId': issue.id}` directly (no picker). A
+  `RunSkillCallback` typedef threads the callback through `_ContentArea` → `_ProjectsPlaceholder` →
+  `_ProjectsContent` → `_ProjectSectionContent`/`_KanbanOrDetail`/`IssueDetailSection`.
+- Per "Testing Decisions", no new widget tests were added (UI wiring is human-QA territory). Verified
+  `flutter analyze` (0 errors; 6 pre-existing infos/warnings in unrelated `keep_track`/`projects`/`settings`
+  files) and `flutter test` (68/68 passing, including all 8 `AgentRunController` tests).

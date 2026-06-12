@@ -10,6 +10,36 @@ const _frontmatterDelimiter = '---';
 class IssueFrontmatterWriter {
   const IssueFrontmatterWriter();
 
+  /// Builds the full contents of a brand-new issue markdown file from
+  /// scratch, including YAML frontmatter and body.
+  String createFileContents(Issue issue) {
+    final createdAt = issue.createdAt ?? DateTime.now();
+    final frontmatter = <String>[
+      'id: ${_scalar(issue.id)}',
+      'title: ${_scalar(issue.title)}',
+      'feature: ${_scalar(issue.feature)}',
+      'status: ${issue.status.name}',
+      'created_at: ${_formatDate(createdAt)}',
+      'tags: ${_flowList(issue.tags)}',
+    ];
+
+    return [
+      _frontmatterDelimiter,
+      ...frontmatter,
+      _frontmatterDelimiter,
+      '',
+      issue.body.trim(),
+      '',
+    ].join('\n');
+  }
+
+  String _formatDate(DateTime date) {
+    final year = date.year.toString().padLeft(4, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
+  }
+
   String write(
     String contents, {
     String? title,

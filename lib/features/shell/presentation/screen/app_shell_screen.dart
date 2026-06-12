@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
 import 'package:crm/core/ui/desktop_title_bar.dart';
+import 'package:crm/features/agent_run/api.dart';
 import 'package:crm/features/home/api.dart';
 import 'package:crm/features/kanban/api.dart';
 import 'package:crm/features/projects/api.dart';
@@ -10,6 +11,12 @@ import '../../domain/controller/shell_controller.dart';
 import '../state/shell_state.dart';
 import '../widget/app_rail.dart';
 import '../widget/app_sidebar.dart';
+
+typedef RunSkillCallback = void Function({
+  required AgentSkill skill,
+  required Project project,
+  Map<String, dynamic>? context,
+});
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -20,6 +27,10 @@ class AppShellScreen extends StatefulWidget {
 
 class _AppShellScreenState extends State<AppShellScreen> {
   late final ShellController _controller;
+
+  AgentRunController? _activeAgentRun;
+  Project? _activeAgentRunProject;
+  bool _showAgentRunOverlay = false;
 
   @override
   void initState() {
@@ -33,37 +44,105 @@ class _AppShellScreenState extends State<AppShellScreen> {
     super.dispose();
   }
 
+  void _onRunSkill({
+    required AgentSkill skill,
+    required Project project,
+    Map<String, dynamic>? context,
+  }) {
+    final runController = createAgentRunController();
+    setState(() {
+      _activeAgentRun = runController;
+      _activeAgentRunProject = project;
+      _showAgentRunOverlay = true;
+    });
+    runController.start(
+      skill: skill,
+      repoPath: project.localPath,
+      projectName: project.name,
+      context: context,
+    );
+  }
+
+  void _onRunInBackground() {
+    final runController = _activeAgentRun;
+    if (runController == null) return;
+    runController.background();
+    registerActiveAgentRunController(runController);
+    setState(() => _showAgentRunOverlay = false);
+  }
+
+  void _onReopenAgentRun() {
+    _activeAgentRun?.foreground();
+    setState(() => _showAgentRunOverlay = true);
+  }
+
+  void _onViewBoard() {
+    final runController = _activeAgentRun;
+    final project = _activeAgentRunProject;
+    clearActiveAgentRunController();
+    runController?.dispose();
+    setState(() {
+      _activeAgentRun = null;
+      _activeAgentRunProject = null;
+      _showAgentRunOverlay = false;
+    });
+    if (project != null) {
+      _controller.selectTab(AppTab.projects);
+      _controller.selectProject(project.id);
+      _controller.selectProjectSection(ProjectSection.kanban);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final activeRun = _activeAgentRun;
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Column(
+      body: Stack(
         children: [
-          const DesktopTitleBar(),
-          Container(height: 1, color: AppColors.border),
-          Expanded(
-            child: Row(
-              children: [
-                AppRail(controller: _controller),
-                Container(width: 1, color: AppColors.border),
-                AppSidebar(controller: _controller),
-                Container(width: 1, color: AppColors.border),
-                Expanded(
-                  child: StreamBuilder<ShellStateData>(
-                    stream: _controller.stream,
-                    initialData: _controller.state,
-                    builder: (context, snapshot) {
-                      final shellState = snapshot.data!;
-                      return _ContentArea(
-                        shellState: shellState,
-                        controller: _controller,
-                      );
-                    },
-                  ),
+          Column(
+            children: [
+              const DesktopTitleBar(),
+              Container(height: 1, color: AppColors.border),
+              Expanded(
+                child: Row(
+                  children: [
+                    AppRail(controller: _controller),
+                    Container(width: 1, color: AppColors.border),
+                    AppSidebar(controller: _controller),
+                    Container(width: 1, color: AppColors.border),
+                    Expanded(
+                      child: StreamBuilder<ShellStateData>(
+                        stream: _controller.stream,
+                        initialData: _controller.state,
+                        builder: (context, snapshot) {
+                          final shellState = snapshot.data!;
+                          return _ContentArea(
+                            shellState: shellState,
+                            controller: _controller,
+                            onRunSkill: _onRunSkill,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          if (activeRun != null && _showAgentRunOverlay)
+            Positioned.fill(
+              child: AgentRunScreen(
+                controller: activeRun,
+                onRunInBackground: _onRunInBackground,
+                onViewBoard: _onViewBoard,
+              ),
+            ),
+          if (activeRun != null)
+            AgentRunIndicator(
+              controller: activeRun,
+              onTap: _onReopenAgentRun,
+            ),
         ],
       ),
     );
@@ -73,14 +152,23 @@ class _AppShellScreenState extends State<AppShellScreen> {
 class _ContentArea extends StatelessWidget {
   final ShellStateData shellState;
   final ShellController controller;
+  final RunSkillCallback onRunSkill;
 
-  const _ContentArea({required this.shellState, required this.controller});
+  const _ContentArea({
+    required this.shellState,
+    required this.controller,
+    required this.onRunSkill,
+  });
 
   @override
   Widget build(BuildContext context) {
     return switch (shellState.selectedTab) {
       AppTab.home => const _HomePlaceholder(),
-      AppTab.projects => _ProjectsPlaceholder(shellState: shellState, controller: controller),
+      AppTab.projects => _ProjectsPlaceholder(
+          shellState: shellState,
+          controller: controller,
+          onRunSkill: onRunSkill,
+        ),
       AppTab.settings => _SettingsContent(section: shellState.selectedSettingsSection),
     };
   }
@@ -167,8 +255,13 @@ class _ServicesContent extends StatelessWidget {
 class _ProjectsPlaceholder extends StatelessWidget {
   final ShellStateData shellState;
   final ShellController controller;
+  final RunSkillCallback onRunSkill;
 
-  const _ProjectsPlaceholder({required this.shellState, required this.controller});
+  const _ProjectsPlaceholder({
+    required this.shellState,
+    required this.controller,
+    required this.onRunSkill,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -195,6 +288,7 @@ class _ProjectsPlaceholder extends StatelessWidget {
               shellState: shellState,
               controller: controller,
               selectedProject: selectedProject,
+              onRunSkill: onRunSkill,
             );
           },
         );
@@ -207,11 +301,13 @@ class _ProjectsContent extends StatefulWidget {
   final ShellStateData shellState;
   final ShellController controller;
   final Project? selectedProject;
+  final RunSkillCallback onRunSkill;
 
   const _ProjectsContent({
     required this.shellState,
     required this.controller,
     required this.selectedProject,
+    required this.onRunSkill,
   });
 
   @override
@@ -283,6 +379,14 @@ class _ProjectsContentState extends State<_ProjectsContent> {
     if (localPath != null) _issuesController.load(localPath);
   }
 
+  Future<void> _runSkill(BuildContext context) async {
+    final project = widget.selectedProject;
+    if (project == null) return;
+    final skill = await SkillPickerDialog.show(context);
+    if (skill == null) return;
+    widget.onRunSkill(skill: skill, project: project);
+  }
+
   void _openIssue(Issue issue) {
     setState(() => _selectedIssueId = issue.id);
   }
@@ -326,6 +430,8 @@ class _ProjectsContentState extends State<_ProjectsContent> {
                       shellState.selectedProjectSection == ProjectSection.kanban) ...[
                     _RescanButton(onPressed: _rescan),
                     const SizedBox(width: AppStyling.spaceMd),
+                    _RunSkillButton(onPressed: () => _runSkill(context)),
+                    const SizedBox(width: AppStyling.spaceMd),
                   ],
                   if (project != null)
                     _ProjectSectionSwitcher(
@@ -349,6 +455,8 @@ class _ProjectsContentState extends State<_ProjectsContent> {
                     onCloseIssue: _closeIssue,
                     announcementsController: _announcementsController,
                     bugReportsController: _bugReportsController,
+                    project: project,
+                    onRunSkill: widget.onRunSkill,
                   ),
           ),
         ],
@@ -365,6 +473,8 @@ class _ProjectSectionContent extends StatelessWidget {
   final VoidCallback onCloseIssue;
   final AnnouncementsController? announcementsController;
   final BugReportsController? bugReportsController;
+  final Project project;
+  final RunSkillCallback onRunSkill;
 
   const _ProjectSectionContent({
     required this.section,
@@ -374,6 +484,8 @@ class _ProjectSectionContent extends StatelessWidget {
     required this.onCloseIssue,
     required this.announcementsController,
     required this.bugReportsController,
+    required this.project,
+    required this.onRunSkill,
   });
 
   @override
@@ -384,12 +496,19 @@ class _ProjectSectionContent extends StatelessWidget {
           selectedIssueId: selectedIssueId,
           onIssueTap: onIssueTap,
           onCloseIssue: onCloseIssue,
+          project: project,
+          onRunSkill: onRunSkill,
         ),
       ProjectSection.bugReports => bugReportsController == null
           ? Center(
               child: Text('Loading bug reports...', style: AppStyling.bodySm),
             )
-          : BugReportsSection(controller: bugReportsController!),
+          : BugReportsSection(
+              controller: bugReportsController!,
+              issuesController: issuesController,
+              project: project,
+              onRunSkill: onRunSkill,
+            ),
       ProjectSection.announcements => announcementsController == null
           ? Center(
               child: Text('Loading announcements...', style: AppStyling.bodySm),
@@ -404,12 +523,16 @@ class _KanbanOrDetail extends StatelessWidget {
   final String? selectedIssueId;
   final void Function(Issue issue) onIssueTap;
   final VoidCallback onCloseIssue;
+  final Project project;
+  final RunSkillCallback onRunSkill;
 
   const _KanbanOrDetail({
     required this.issuesController,
     required this.selectedIssueId,
     required this.onIssueTap,
     required this.onCloseIssue,
+    required this.project,
+    required this.onRunSkill,
   });
 
   @override
@@ -438,8 +561,45 @@ class _KanbanOrDetail extends StatelessWidget {
           controller: issuesController,
           issue: issue,
           onBack: onCloseIssue,
+          onRunSkill: () => onRunSkill(
+            skill: AgentSkill.workIssue,
+            project: project,
+            context: {'issueId': issue!.id},
+          ),
         );
       },
+    );
+  }
+}
+
+class _RunSkillButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _RunSkillButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppStyling.spaceMd,
+          vertical: AppStyling.spaceSm,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(AppStyling.radiusMd),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.smart_toy_outlined, size: 16, color: AppColors.textSecondary),
+            const SizedBox(width: AppStyling.spaceXs),
+            Text('Run skill', style: AppStyling.bodySm),
+          ],
+        ),
+      ),
     );
   }
 }

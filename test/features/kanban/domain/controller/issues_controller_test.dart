@@ -18,6 +18,9 @@ class FakeIssuesRepository implements IssuesRepository {
   Issue? lastMovedIssue;
   IssueStatus? lastMovedStatus;
 
+  Issue? lastCreatedIssue;
+  String? lastCreatedLocalPath;
+
   FakeIssuesRepository([List<Issue>? initial]) : issues = initial ?? [];
 
   @override
@@ -56,6 +59,25 @@ class FakeIssuesRepository implements IssuesRepository {
         if (existing.id == issue.id) updated else existing,
     ];
     return updated;
+  }
+
+  @override
+  Future<Issue> createIssue(String localPath, Issue issue) async {
+    lastCreatedLocalPath = localPath;
+    lastCreatedIssue = issue;
+
+    final created = Issue(
+      id: issue.id,
+      title: issue.title,
+      feature: issue.feature,
+      status: IssueStatus.backlog,
+      createdAt: issue.createdAt,
+      tags: issue.tags,
+      body: issue.body,
+      filePath: 'C:\\repo\\issues\\backlog\\${issue.id}.md',
+    );
+    issues = [...issues, created];
+    return created;
   }
 
   @override
@@ -229,6 +251,44 @@ void main() {
       expect(repo.lastUpdatedBody, contains('- [ ] First item'));
       expect(repo.lastUpdatedBody, contains('- [x] Second item'));
       expect(controller.data!.first.body, contains('- [x] Second item'));
+
+      controller.dispose();
+    });
+
+    test('createIssue() persists the new issue and appends it to state', () async {
+      const existing = Issue(
+        id: 'issue-001',
+        title: 'Add OAuth login',
+        feature: 'user-auth',
+        status: IssueStatus.ready,
+        createdAt: null,
+        tags: ['auth'],
+        body: 'Body',
+        filePath: r'C:\repo\issues\ready\issue-001.md',
+      );
+      final repo = FakeIssuesRepository([existing]);
+      final controller = IssuesController(repo);
+      await controller.load(r'C:\repo');
+
+      final newIssue = Issue(
+        id: 'bug-bug-123',
+        title: 'Crash on save',
+        feature: 'bug-report',
+        status: IssueStatus.backlog,
+        createdAt: DateTime(2026, 6, 12),
+        tags: const ['bug', 'error'],
+        body: '## Message\n\nCrash on save',
+        filePath: '',
+      );
+
+      await controller.createIssue(r'C:\repo', newIssue);
+
+      expect(repo.lastCreatedLocalPath, r'C:\repo');
+      expect(repo.lastCreatedIssue, newIssue);
+      expect(controller.data, hasLength(2));
+      expect(controller.data!.last.id, 'bug-bug-123');
+      expect(controller.data!.last.status, IssueStatus.backlog);
+      expect(controller.data!.last.filePath, isNotEmpty);
 
       controller.dispose();
     });

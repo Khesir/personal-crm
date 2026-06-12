@@ -13,12 +13,14 @@ class IssueDetailSection extends StatelessWidget {
   final IssuesController controller;
   final Issue issue;
   final VoidCallback onBack;
+  final VoidCallback onRunSkill;
 
   const IssueDetailSection({
     super.key,
     required this.controller,
     required this.issue,
     required this.onBack,
+    required this.onRunSkill,
   });
 
   void _toggleCriteria(int index) {
@@ -51,6 +53,7 @@ class IssueDetailSection extends StatelessWidget {
             onBack: onBack,
             onMove: _move,
             onEdit: () => _edit(context),
+            onRunSkill: onRunSkill,
           ),
           const SizedBox(height: AppStyling.spaceLg),
           Expanded(
@@ -112,12 +115,14 @@ class _DetailHeader extends StatelessWidget {
   final VoidCallback onBack;
   final ValueChanged<IssueStatus> onMove;
   final VoidCallback onEdit;
+  final VoidCallback onRunSkill;
 
   const _DetailHeader({
     required this.issue,
     required this.onBack,
     required this.onMove,
     required this.onEdit,
+    required this.onRunSkill,
   });
 
   @override
@@ -145,6 +150,8 @@ class _DetailHeader extends StatelessWidget {
           ),
         ),
         IssueStatusPicker(status: issue.status, onChanged: onMove),
+        const SizedBox(width: AppStyling.spaceMd),
+        _ActionButton(label: 'Run skill', icon: Icons.smart_toy_outlined, onTap: onRunSkill),
         const SizedBox(width: AppStyling.spaceMd),
         _ActionButton(label: 'Edit', icon: Icons.edit_outlined, onTap: onEdit),
       ],

@@ -33,6 +33,13 @@ class IssuesController extends StreamState<AsyncState<List<Issue>>> {
     _replaceIssue(moved);
   }
 
+  Future<void> createIssue(String localPath, Issue issue) async {
+    final created = await repository.createIssue(localPath, issue);
+    final current = data;
+    if (current == null) return;
+    emit(AsyncData([...current, created]));
+  }
+
   Future<void> toggleAcceptanceCriteria(Issue issue, int index) {
     final updatedBody = toggleChecklistItem(issue.body, index);
     return updateIssue(issue, body: updatedBody);

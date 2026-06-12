@@ -46,8 +46,4 @@ class AppColors {
   static const warning = Color(0xFFF59E0B);
   static const error = Color(0xFFEF4444);
   static const info = Color(0xFF3B82F6);
-
-  // Legacy: retained until the keep_track feature's announcement-related
-  // code is moved into the projects feature (slice 007/012).
-  static const accentKeepTrack = Color(0xFF14B8A6);
 }
