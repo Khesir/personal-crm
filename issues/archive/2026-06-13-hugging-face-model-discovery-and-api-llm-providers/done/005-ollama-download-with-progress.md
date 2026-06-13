@@ -2,7 +2,7 @@
 id: issue-005
 title: "One-click download into Ollama with progress"
 feature: model-discovery
-status: qa
+status: done
 created_at: 2026-06-13
 tags: [afk, p2]
 ---
@@ -103,3 +103,5 @@ _Updated as work progresses._
   (`resolveOllamaCard` for none/sole/default/ambiguous, and `download()` for success progression, explicit
   card choice, no-card failure, and mapped pull-error failure). Full suite: 182/182 passing;
   `flutter analyze` clean (same 2 pre-existing `activeColor` infos).
+
+QA approved by user on 2026-06-13.

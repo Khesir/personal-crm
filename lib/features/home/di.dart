@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crm/features/brain/api.dart';
 import 'package:crm/features/settings/data/datasource/service_cards_local_datasource.dart';
 import 'package:crm/features/settings/data/repository/service_cards_repository_impl.dart';
 import 'package:crm/features/settings/domain/model/service_card.dart';
@@ -99,7 +100,8 @@ Future<ChatController> _createChatController() async {
   final serviceCardsRepository = ServiceCardsRepositoryImpl(ServiceCardsLocalDatasource(prefs));
   final conversationsRepository = ChatConversationsRepositoryImpl(ChatLocalDatasource(prefs));
 
-  final controller = ChatController(serviceCardsRepository, _repositoryFor, conversationsRepository);
+  final brainRepository = createBrainRepository();
+  final controller = ChatController(serviceCardsRepository, _repositoryFor, conversationsRepository, brainRepository);
   await controller.load();
   _chatController = controller;
   return controller;

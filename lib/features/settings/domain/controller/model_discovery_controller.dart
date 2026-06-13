@@ -2,17 +2,22 @@ import 'package:crm/core/state/state.dart';
 import 'package:crm/features/home/data/datasource/ollama_datasource.dart';
 import 'package:crm/features/home/domain/model/ollama_pull_progress.dart';
 import 'package:crm/features/home/domain/repository/chat_model_repository.dart';
+import 'package:crm/features/settings/data/repository/health_check_repository_impl.dart';
+import 'package:crm/features/settings/domain/model/health_status.dart';
 import 'package:crm/features/settings/domain/model/service_card.dart';
+import 'package:crm/features/settings/domain/repository/health_check_repository.dart';
 import 'package:dio/dio.dart';
 
 import '../../data/datasource/huggingface_datasource.dart';
 import '../model/download_status.dart';
 import '../model/fit_scorer.dart';
 import '../model/hardware_info.dart';
+import '../model/huggingface_download.dart';
 import '../model/huggingface_model_result.dart';
 import '../model/model_discovery_result.dart';
 import '../model/model_discovery_state.dart';
 import '../repository/hardware_info_repository.dart';
+import 'huggingface_download_tracker.dart';
 
 /// Drives the "Search Hugging Face" dialog: detects local hardware and
 /// searches Hugging Face for GGUF models.
@@ -30,12 +35,26 @@ class ModelDiscoveryController extends StreamState<AsyncState<ModelDiscoveryStat
   /// pointed at the card's `fields['baseUrl']`.
   final OllamaDatasource Function(ServiceCard card) ollamaDatasourceFor;
 
+  /// Tracks download status across "Search Hugging Face" dialog
+  /// open/close — see [HuggingFaceDownloadTracker]. Injected so tests can
+  /// supply a fresh instance; defaults to the app-lifetime singleton.
+  final HuggingFaceDownloadTracker downloadTracker;
+
+  /// Checks reachability of an Ollama [ServiceCard] before [download] starts
+  /// pulling. Injected so tests can supply a fake; defaults to
+  /// [HealthCheckRepositoryImpl].
+  final HealthCheckRepository healthCheckRepository;
+
   ModelDiscoveryController(
     this.datasource,
     this.hardwareRepository, {
     this.ollamaCards = const [],
     OllamaDatasource Function(ServiceCard card)? ollamaDatasourceFor,
+    HuggingFaceDownloadTracker? downloadTracker,
+    HealthCheckRepository? healthCheckRepository,
   })  : ollamaDatasourceFor = ollamaDatasourceFor ?? _defaultOllamaDatasourceFor,
+        downloadTracker = downloadTracker ?? HuggingFaceDownloadTracker.instance,
+        healthCheckRepository = healthCheckRepository ?? HealthCheckRepositoryImpl(),
         super(const AsyncLoading());
 
   static OllamaDatasource _defaultOllamaDatasourceFor(ServiceCard card) {
@@ -81,6 +100,7 @@ class ModelDiscoveryController extends StreamState<AsyncState<ModelDiscoveryStat
             paramsBillions: model.paramsBillions,
             quant: model.quant,
           ),
+          downloadStatus: downloadTracker.statusFor(model.repoId, model.quant),
         ),
     ];
     withFit.sort((a, b) => b.fit.score.compareTo(a.fit.score));
@@ -130,24 +150,51 @@ class ModelDiscoveryController extends StreamState<AsyncState<ModelDiscoveryStat
           'Multiple Ollama service cards are configured. Choose one to download into.',
         OllamaCardResolutionResolved() => '', // unreachable: _resolveCardOrNull would be non-null
       };
-      _setStatus(result, DownloadStatus.failed(message));
+      _setStatus(result, DownloadStatus.failed(message), targetCard: target);
       return;
     }
 
-    _setStatus(result, const DownloadStatus.downloading(OllamaPullProgress(status: 'starting')));
+    final health = await healthCheckRepository.check(target);
+    if (health == HealthStatus.offline) {
+      final baseUrl = target.fields['baseUrl'];
+      _setStatus(
+        result,
+        DownloadStatus.failed("Ollama isn't reachable at $baseUrl. Make sure it's running."),
+        targetCard: target,
+      );
+      return;
+    }
+
+    _setStatus(result, const DownloadStatus.downloading(OllamaPullProgress(status: 'starting')),
+        targetCard: target);
 
     final ollamaDatasource = ollamaDatasourceFor(target);
     final pullName = 'hf.co/${result.model.repoId}:${result.model.quant}';
 
     try {
       await for (final progress in ollamaDatasource.pullModel(name: pullName)) {
-        _setStatus(result, DownloadStatus.downloading(progress));
+        _setStatus(result, DownloadStatus.downloading(progress), targetCard: target);
       }
-      _setStatus(result, const DownloadStatus.added());
+      _setStatus(result, const DownloadStatus.added(), targetCard: target);
     } catch (e) {
-      final message = e is ChatRequestException ? e.message : e.toString();
-      _setStatus(result, DownloadStatus.failed(message));
+      final message = _describeDownloadError(e, target);
+      _setStatus(result, DownloadStatus.failed(message), targetCard: target);
     }
+  }
+
+  /// Maps an error thrown while pulling into a user-facing message naming
+  /// [target]'s `baseUrl` where relevant. See [download] doc for the exact
+  /// shapes.
+  String _describeDownloadError(Object e, ServiceCard target) {
+    if (e is ChatRequestException) return e.message;
+    if (e is DioException) {
+      if (e.response == null) {
+        final baseUrl = target.fields['baseUrl'];
+        return 'Ollama became unreachable at $baseUrl (${e.message}). Make sure it\'s running.';
+      }
+      return e.message ?? e.toString();
+    }
+    return e.toString();
   }
 
   ServiceCard? _resolveCardOrNull() {
@@ -159,7 +206,18 @@ class ModelDiscoveryController extends StreamState<AsyncState<ModelDiscoveryStat
   /// [status], matched by (repoId, quant). Uses [update] (not [execute]) so
   /// the rest of [ModelDiscoveryState] — hardware, other results, search
   /// results — is preserved.
-  void _setStatus(ModelDiscoveryResult target, DownloadStatus status) {
+  ///
+  /// Also mirrors [status] into [downloadTracker] so it survives this
+  /// controller (and the dialog it backs) being disposed.
+  void _setStatus(ModelDiscoveryResult target, DownloadStatus status, {ServiceCard? targetCard}) {
+    downloadTracker.track(HuggingFaceDownload(
+      repoId: target.model.repoId,
+      quant: target.model.quant,
+      displayName: target.model.displayName,
+      status: status,
+      serviceCardId: targetCard?.id,
+    ));
+
     update((current) {
       if (current is! AsyncData<ModelDiscoveryState>) return current;
       final state = current.data;

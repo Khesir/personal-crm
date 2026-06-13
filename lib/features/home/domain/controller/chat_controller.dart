@@ -1,4 +1,5 @@
 import 'package:crm/core/state/state.dart';
+import 'package:crm/features/brain/api.dart';
 import 'package:crm/features/settings/domain/model/service_card.dart';
 import 'package:crm/features/settings/domain/repository/service_cards_repository.dart';
 import '../../presentation/state/chat_state.dart';
@@ -12,6 +13,7 @@ class ChatController extends StreamState<ChatStateData> {
   final ServiceCardsRepository serviceCardsRepository;
   final ChatModelRepository Function(ServiceCard card) repositoryFor;
   final ChatConversationsRepository conversationsRepository;
+  final BrainRepository brainRepository;
 
   List<ServiceCard> _cookbookCards = [];
 
@@ -19,6 +21,7 @@ class ChatController extends StreamState<ChatStateData> {
     this.serviceCardsRepository,
     this.repositoryFor,
     this.conversationsRepository,
+    this.brainRepository,
   ) : super(const ChatStateData());
 
   Future<void> load() async {
@@ -149,10 +152,15 @@ class ChatController extends StreamState<ChatStateData> {
 
     final history = [...conversation.messages, userMessage];
 
+    final systemPrompt = await brainRepository.buildSystemPrompt();
+    final requestMessages = systemPrompt != null
+        ? [ChatMessage(role: ChatRole.system, content: systemPrompt), ...history]
+        : history;
+
     final repo = repositoryFor(card);
 
     try {
-      await for (final chunk in repo.streamChat(model: entry.model, messages: history)) {
+      await for (final chunk in repo.streamChat(model: entry.model, messages: requestMessages)) {
         _appendToLastMessage(conversation.id, chunk);
       }
     } catch (e) {

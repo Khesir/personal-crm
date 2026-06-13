@@ -2,7 +2,7 @@
 id: issue-003
 title: "Search Hugging Face — results table + hardware detection bar"
 feature: model-discovery
-status: qa
+status: done
 created_at: 2026-06-13
 tags: [afk, p1]
 ---
@@ -111,3 +111,5 @@ _Updated as work progresses._
   (siblings/size/config.max_position_embeddings) are based on a single live fetch and should be sanity-checked
   against real searches; the new dialog UI (hardware bar layout, search behavior, results table) has not been
   visually/widget-tested and needs manual QA on a Windows machine (with and without an NVIDIA GPU).
+
+QA approved by user on 2026-06-13.

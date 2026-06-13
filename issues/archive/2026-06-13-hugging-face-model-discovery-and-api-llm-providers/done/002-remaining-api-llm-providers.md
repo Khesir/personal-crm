@@ -2,7 +2,7 @@
 id: issue-002
 title: "Remaining 7 API LLM providers (Gemini, OpenRouter, OpenAI, DeepSeek, Mistral, NVIDIA, OpenCode Zen)"
 feature: model-discovery
-status: qa
+status: done
 created_at: 2026-06-13
 tags: [afk, p2]
 ---
@@ -106,3 +106,5 @@ _Updated as work progresses._
   no new/changed datasource code was needed (all 7 reuse `OpenAiCompatibleDatasource`/
   `OpenAiCompatibleRepositoryImpl` per the issue's Notes), but live-credential verification is outside the
   scope of this code change and would need manual QA with real API keys.
+
+QA approved by user on 2026-06-13.

@@ -2,7 +2,7 @@
 id: issue-001
 title: "Groq as the first new API LLM provider (tracer bullet)"
 feature: model-discovery
-status: qa
+status: done
 created_at: 2026-06-13
 tags: [afk, p1]
 ---
@@ -91,3 +91,5 @@ Tested via `flutter analyze` (clean, only the 2 pre-existing unrelated
 `activeColor` deprecation infos) and `flutter test` (128/128 passing,
 including the updated seven-type round-trip test and the new
 `service_type_metadata_test.dart`).
+
+QA approved by user on 2026-06-13.

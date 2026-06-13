@@ -8,6 +8,7 @@ import '../../domain/model/service_card.dart';
 import '../../domain/model/service_type_metadata.dart';
 import '../dialogs/huggingface_search_dialog.dart';
 import '../dialogs/service_card_form_dialog.dart';
+import 'local_llm_models_area.dart';
 
 class ServicesSection extends StatefulWidget {
   final ServiceCardsController controller;
@@ -190,44 +191,65 @@ class _CategorySection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppStyling.spaceLg),
+        if (category == ServiceCategory.localLlm) ...[
+          Text('Engines', style: AppStyling.label),
+          const SizedBox(height: AppStyling.spaceSm),
+        ],
         AsyncStreamBuilder<List<ServiceCard>>(
           state: controller,
           builder: (context, cards) {
             final categoryCards = cards.where((c) => c.category == category).toList();
-            if (categoryCards.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppStyling.spaceXl),
-                  child: Text('Nothing here yet.', style: AppStyling.bodySm),
+            final engineCardList = categoryCards.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: AppStyling.spaceXl),
+                      child: Text('Nothing here yet.', style: AppStyling.bodySm),
+                    ),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: categoryCards.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: AppStyling.spaceMd),
+                    itemBuilder: (context, index) {
+                      final card = categoryCards[index];
+                      final sameTypeCount = categoryCards.where((c) => c.type == card.type).length;
+                      return StreamBuilder<Map<String, HealthStatus>>(
+                        stream: controller.healthStream,
+                        initialData: controller.healthStatuses,
+                        builder: (context, snapshot) {
+                          final status = snapshot.data?[card.id];
+                          return _ServiceCard(
+                            card: card,
+                            status: status,
+                            showSetDefault: sameTypeCount > 1 && !card.isDefault,
+                            onEdit: () => _openEditDialog(context, card),
+                            onDelete: () => controller.removeCard(card.id),
+                            onRefresh: () => controller.checkHealth(card),
+                            onSetDefault: () => controller.setDefault(card.type, card.id),
+                            onToggleEnabled: () => controller.toggleCardEnabled(card.id),
+                          );
+                        },
+                      );
+                    },
+                  );
+
+            if (category != ServiceCategory.localLlm) return engineCardList;
+
+            final engineCards =
+                categoryCards.where((c) => c.type == ServiceType.ollama || c.type == ServiceType.customLocal).toList();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                engineCardList,
+                const SizedBox(height: AppStyling.spaceXl),
+                LocalLlmModelsArea(
+                  engines: engineCards,
+                  healthStatuses: controller.healthStatuses,
+                  healthStream: controller.healthStream,
                 ),
-              );
-            }
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: categoryCards.length,
-              separatorBuilder: (_, _) => const SizedBox(height: AppStyling.spaceMd),
-              itemBuilder: (context, index) {
-                final card = categoryCards[index];
-                final sameTypeCount = categoryCards.where((c) => c.type == card.type).length;
-                return StreamBuilder<Map<String, HealthStatus>>(
-                  stream: controller.healthStream,
-                  initialData: controller.healthStatuses,
-                  builder: (context, snapshot) {
-                    final status = snapshot.data?[card.id];
-                    return _ServiceCard(
-                      card: card,
-                      status: status,
-                      showSetDefault: sameTypeCount > 1 && !card.isDefault,
-                      onEdit: () => _openEditDialog(context, card),
-                      onDelete: () => controller.removeCard(card.id),
-                      onRefresh: () => controller.checkHealth(card),
-                      onSetDefault: () => controller.setDefault(card.type, card.id),
-                      onToggleEnabled: () => controller.toggleCardEnabled(card.id),
-                    );
-                  },
-                );
-              },
+              ],
             );
           },
         ),

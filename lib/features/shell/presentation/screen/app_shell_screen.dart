@@ -212,6 +212,7 @@ class _SettingsContent extends StatelessWidget {
       child: switch (section) {
         SettingsSection.projects => const _SettingsProjectsContent(),
         SettingsSection.services => const _ServicesContent(),
+        SettingsSection.brain => BrainSection(processRunner: createProcessRunner()),
         SettingsSection.about => const AboutSection(),
       },
     );

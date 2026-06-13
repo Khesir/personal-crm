@@ -25,11 +25,13 @@ enum ProjectSection {
 enum SettingsSection {
   projects,
   services,
+  brain,
   about;
 
   String get label => switch (this) {
         SettingsSection.projects => 'Projects',
         SettingsSection.services => 'Services',
+        SettingsSection.brain => 'Brain',
         SettingsSection.about => 'About',
       };
 }

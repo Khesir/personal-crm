@@ -13,6 +13,9 @@ import 'domain/controller/projects_controller.dart';
 import 'domain/controller/service_cards_controller.dart';
 import 'domain/model/service_card.dart';
 import 'domain/model/service_cards_cache.dart';
+import 'domain/repository/process_runner.dart';
+
+ProcessRunner createProcessRunner() => IoProcessRunner();
 
 Future<ProjectsController> createProjectsController() async {
   final prefs = await SharedPreferences.getInstance();

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
-import 'package:crm/features/home/domain/model/ollama_pull_progress.dart';
 import '../../domain/controller/model_discovery_controller.dart';
 import '../../domain/model/download_status.dart';
 import '../../domain/model/hardware_info.dart';
@@ -9,6 +8,7 @@ import '../../domain/model/model_discovery_result.dart';
 import '../../domain/model/model_discovery_state.dart';
 import '../../domain/model/model_fit_result.dart';
 import '../../domain/model/service_card.dart';
+import '../widget/huggingface_download_status_widgets.dart';
 
 const _kDialogWidth = 820.0;
 
@@ -395,8 +395,8 @@ class _DownloadCell extends StatelessWidget {
 
     return switch (status) {
       DownloadStatusIdle() => _buildIdle(context),
-      DownloadStatusDownloading(progress: final progress) => _ProgressIndicatorCell(progress: progress),
-      DownloadStatusAdded() => const _AddedBadge(),
+      DownloadStatusDownloading(progress: final progress) => DownloadProgressIndicator(progress: progress),
+      DownloadStatusAdded() => const DownloadAddedBadge(),
       DownloadStatusFailed(message: final message) => _FailedCell(
           message: message,
           onRetry: () => _startDownload(context),
@@ -453,78 +453,6 @@ class _DownloadButton extends StatelessWidget {
   }
 }
 
-/// Inline progress indicator for [DownloadStatus.downloading], shown in
-/// place of the Download button while a pull is in flight.
-class _ProgressIndicatorCell extends StatelessWidget {
-  final OllamaPullProgress progress;
-
-  const _ProgressIndicatorCell({required this.progress});
-
-  String _formatBytes(int bytes) {
-    if (bytes <= 0) return '0 MB';
-    final mb = bytes / (1024 * 1024);
-    if (mb >= 1024) return '${(mb / 1024).toStringAsFixed(1)} GB';
-    return '${mb.toStringAsFixed(0)} MB';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final total = progress.totalBytes;
-    final completed = progress.completedBytes;
-    final hasRatio = total != null && total > 0 && completed != null;
-    final value = hasRatio ? completed / total : null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppStyling.radiusSm),
-          child: LinearProgressIndicator(
-            value: value,
-            minHeight: 4,
-            backgroundColor: AppColors.surfaceRaised,
-            color: AppColors.accent,
-          ),
-        ),
-        const SizedBox(height: AppStyling.spaceXs),
-        Text(
-          hasRatio
-              ? '${progress.status} (${_formatBytes(completed)} / ${_formatBytes(total)})'
-              : progress.status,
-          style: AppStyling.monoSm.copyWith(color: AppColors.textMuted),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-}
-
-/// Shown for [DownloadStatus.added]: a checkmark + "Added" label, styled
-/// similarly to [_FitBadge].
-class _AddedBadge extends StatelessWidget {
-  const _AddedBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppStyling.spaceSm, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.success.withAlpha(0x29),
-        borderRadius: BorderRadius.circular(AppStyling.radiusSm),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check, size: 12, color: AppColors.success),
-          const SizedBox(width: AppStyling.spaceXs),
-          Text('Added', style: AppStyling.monoSm.copyWith(color: AppColors.success)),
-        ],
-      ),
-    );
-  }
-}
-
 /// Shown for [DownloadStatus.failed]: the error message plus a "Download"
 /// button to retry.
 class _FailedCell extends StatelessWidget {
@@ -539,12 +467,7 @@ class _FailedCell extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          message,
-          style: AppStyling.monoSm.copyWith(color: AppColors.error),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+        DownloadErrorMessage(message: message),
         const SizedBox(height: AppStyling.spaceXs),
         _DownloadButton(enabled: true, onPressed: onRetry),
       ],

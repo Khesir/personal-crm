@@ -33,11 +33,6 @@ Implementation done. Tests pass. Waiting for review.
 
 | Issue | Title | Type | Priority |
 |-------|-------|------|----------|
-| [001](qa/001-groq-first-new-api-llm-provider.md) | Groq as the first new API LLM provider (tracer bullet) | AFK | P1 |
-| [003](qa/003-huggingface-search-and-hardware-bar.md) | Search Hugging Face — results table + hardware detection bar | AFK | P1 |
-| [002](qa/002-remaining-api-llm-providers.md) | Remaining 7 API LLM providers (Gemini, OpenRouter, OpenAI, DeepSeek, Mistral, NVIDIA, OpenCode Zen) | AFK | P2 |
-| [004](qa/004-hardware-fit-scoring.md) | Hardware-fit scoring (VRAM/SPEED/SCORE/FIT/MODE columns) | AFK | P2 |
-| [005](qa/005-ollama-download-with-progress.md) | One-click download into Ollama with progress | AFK | P2 |
 
 ---
 
@@ -46,3 +41,6 @@ Approved and complete.
 
 | Issue | Title | Type | Priority |
 |-------|-------|------|----------|
+| [001](done/001-brain-repository-seed-read-assemble.md) | Brain repository: seed, read & assemble system prompt | AFK | P1 |
+| [002](done/002-inject-brain-into-chat-system-prompt.md) | Inject brain into Home chat's system prompt | AFK | P1 |
+| [003](done/003-settings-open-brain-folder.md) | Settings: "Brain" section with Open brain folder button | AFK | P2 |

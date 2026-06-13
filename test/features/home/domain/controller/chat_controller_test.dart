@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:crm/features/brain/api.dart';
 import 'package:crm/features/home/domain/controller/chat_controller.dart';
 import 'package:crm/features/home/domain/model/chat_conversation.dart';
 import 'package:crm/features/home/domain/model/chat_message.dart';
@@ -14,6 +15,7 @@ class FakeChatModelRepository implements ChatModelRepository {
   List<String> models;
   List<String> chunksToEmit;
   Object? listModelsError;
+  List<ChatMessage>? lastMessages;
 
   FakeChatModelRepository({
     this.models = const ['llama3.2'],
@@ -32,8 +34,18 @@ class FakeChatModelRepository implements ChatModelRepository {
     required String model,
     required List<ChatMessage> messages,
   }) {
+    lastMessages = messages;
     return Stream.fromIterable(chunksToEmit);
   }
+}
+
+class FakeBrainRepository implements BrainRepository {
+  String? prompt;
+
+  FakeBrainRepository({this.prompt});
+
+  @override
+  Future<String?> buildSystemPrompt() async => prompt;
 }
 
 class _ManualStreamRepository implements ChatModelRepository {
@@ -173,6 +185,7 @@ void main() {
         FakeServiceCardsRepository([card]),
         _repositoryFor({card.id: FakeChatModelRepository()}),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
 
@@ -195,6 +208,7 @@ void main() {
           custom.id: FakeChatModelRepository(models: ['mistral-7b']),
         }),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
 
       await controller.load();
@@ -235,6 +249,7 @@ void main() {
           claude.id: FakeChatModelRepository(models: ['claude-3-5-sonnet-20241022']),
         }),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
 
       await controller.load();
@@ -268,6 +283,7 @@ void main() {
           claude.id: FakeChatModelRepository(models: ['should-not-appear']),
         }),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
 
       await controller.load();
@@ -299,6 +315,7 @@ void main() {
           ),
         }),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
 
       await controller.load();
@@ -332,6 +349,7 @@ void main() {
         FakeServiceCardsRepository([ollama, claude]),
         _repositoryFor({ollama.id: ollamaRepo, claude.id: claudeRepo}),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
       controller.newConversation();
@@ -358,6 +376,7 @@ void main() {
           custom.id: FakeChatModelRepository(models: ['mistral-7b']),
         }),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
 
@@ -382,6 +401,7 @@ void main() {
           unreachable.id: FakeChatModelRepository(listModelsError: Exception('connection refused')),
         }),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
 
       await controller.load();
@@ -411,6 +431,7 @@ void main() {
           ollama.id: FakeChatModelRepository(models: ['llama3.2', 'qwen2.5']),
         }),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
 
       await controller.load();
@@ -441,6 +462,7 @@ void main() {
         cardsRepo,
         repoFor,
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
 
@@ -470,6 +492,7 @@ void main() {
         cardsRepo,
         repoFor,
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
 
@@ -498,6 +521,7 @@ void main() {
         cardsRepo,
         repoFor,
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
 
@@ -549,6 +573,7 @@ void main() {
         cardsRepo,
         repoFor,
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
       expect(controller.state.activeEntry, isNotNull);
@@ -580,6 +605,7 @@ void main() {
         FakeServiceCardsRepository([ollama, custom]),
         _repositoryFor({ollama.id: ollamaRepo, custom.id: customRepo}),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
       controller.newConversation();
@@ -610,6 +636,7 @@ void main() {
           ollama.id: FakeChatModelRepository(chunksToEmit: ['Hel', 'lo', ' world']),
         }),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
       controller.newConversation();
@@ -637,6 +664,7 @@ void main() {
         FakeServiceCardsRepository([ollama]),
         _repositoryFor({ollama.id: _ManualStreamRepository(chunkController.stream)}),
         conversationsRepo,
+        FakeBrainRepository(),
       );
       await streamingController.load();
       streamingController.newConversation();
@@ -666,6 +694,7 @@ void main() {
           ),
         }),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
       controller.newConversation();
@@ -695,6 +724,7 @@ void main() {
           ),
         }),
         FakeChatConversationsRepository(),
+        FakeBrainRepository(),
       );
       await controller.load();
       controller.newConversation();
@@ -715,6 +745,7 @@ void main() {
         FakeServiceCardsRepository([ollama]),
         _repositoryFor({ollama.id: FakeChatModelRepository()}),
         conversationsRepo,
+        FakeBrainRepository(),
       );
       await firstController.load();
       firstController.newConversation();
@@ -724,6 +755,7 @@ void main() {
         FakeServiceCardsRepository([ollama]),
         _repositoryFor({ollama.id: FakeChatModelRepository()}),
         conversationsRepo,
+        FakeBrainRepository(),
       );
       await secondController.load();
 
@@ -744,6 +776,7 @@ void main() {
         FakeServiceCardsRepository([ollama]),
         _repositoryFor({ollama.id: FakeChatModelRepository(chunksToEmit: ['Hello'])}),
         conversationsRepo,
+        FakeBrainRepository(),
       );
       await controller.load();
       controller.newConversation();
@@ -754,6 +787,7 @@ void main() {
         FakeServiceCardsRepository([ollama]),
         _repositoryFor({ollama.id: FakeChatModelRepository()}),
         conversationsRepo,
+        FakeBrainRepository(),
       );
       await reloaded.load();
 
@@ -764,6 +798,79 @@ void main() {
 
       controller.dispose();
       reloaded.dispose();
+    });
+
+    test('sendMessage prepends the brain\'s system prompt to the messages sent to streamChat', () async {
+      final ollama = _ollamaCard();
+      final modelRepo = FakeChatModelRepository(chunksToEmit: ['Hi']);
+
+      final controller = ChatController(
+        FakeServiceCardsRepository([ollama]),
+        _repositoryFor({ollama.id: modelRepo}),
+        FakeChatConversationsRepository(),
+        FakeBrainRepository(prompt: 'You are a helpful assistant.'),
+      );
+      await controller.load();
+      controller.newConversation();
+
+      await controller.sendMessage('Hello');
+
+      final sentMessages = modelRepo.lastMessages!;
+      expect(sentMessages.first.role, ChatRole.system);
+      expect(sentMessages.first.content, 'You are a helpful assistant.');
+      expect(sentMessages.length, 2);
+      expect(sentMessages[1].role, ChatRole.user);
+      expect(sentMessages[1].content, 'Hello');
+
+      controller.dispose();
+    });
+
+    test('sendMessage leaves messages sent to streamChat unchanged when buildSystemPrompt returns null', () async {
+      final ollama = _ollamaCard();
+      final modelRepo = FakeChatModelRepository(chunksToEmit: ['Hi']);
+
+      final controller = ChatController(
+        FakeServiceCardsRepository([ollama]),
+        _repositoryFor({ollama.id: modelRepo}),
+        FakeChatConversationsRepository(),
+        FakeBrainRepository(),
+      );
+      await controller.load();
+      controller.newConversation();
+
+      await controller.sendMessage('Hello');
+
+      final sentMessages = modelRepo.lastMessages!;
+      expect(sentMessages.length, 1);
+      expect(sentMessages[0].role, ChatRole.user);
+      expect(sentMessages[0].content, 'Hello');
+
+      controller.dispose();
+    });
+
+    test('the prepended brain system message never appears in conversation.messages or persisted data', () async {
+      final ollama = _ollamaCard();
+      final conversationsRepo = FakeChatConversationsRepository();
+      final modelRepo = FakeChatModelRepository(chunksToEmit: ['Hi']);
+
+      final controller = ChatController(
+        FakeServiceCardsRepository([ollama]),
+        _repositoryFor({ollama.id: modelRepo}),
+        conversationsRepo,
+        FakeBrainRepository(prompt: 'You are a helpful assistant.'),
+      );
+      await controller.load();
+      controller.newConversation();
+
+      await controller.sendMessage('Hello');
+
+      final messages = controller.state.activeConversation!.messages;
+      expect(messages.any((m) => m.role == ChatRole.system), isFalse);
+
+      final persisted = conversationsRepo.stored.first.messages;
+      expect(persisted.any((m) => m.role == ChatRole.system), isFalse);
+
+      controller.dispose();
     });
   });
 }

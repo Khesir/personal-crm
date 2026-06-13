@@ -6,14 +6,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/features/home/data/datasource/ollama_datasource.dart';
 import 'package:crm/features/settings/data/datasource/huggingface_datasource.dart';
+import 'package:crm/features/settings/domain/controller/huggingface_download_tracker.dart';
 import 'package:crm/features/settings/domain/controller/model_discovery_controller.dart';
 import 'package:crm/features/settings/domain/model/download_status.dart';
 import 'package:crm/features/settings/domain/model/fit_scorer.dart';
 import 'package:crm/features/settings/domain/model/hardware_info.dart';
+import 'package:crm/features/settings/domain/model/huggingface_download.dart';
 import 'package:crm/features/settings/domain/model/huggingface_model_result.dart';
+import 'package:crm/features/settings/domain/model/health_status.dart';
 import 'package:crm/features/settings/domain/model/model_discovery_state.dart';
 import 'package:crm/features/settings/domain/model/service_card.dart';
 import 'package:crm/features/settings/domain/repository/hardware_info_repository.dart';
+import 'package:crm/features/settings/domain/repository/health_check_repository.dart';
 
 class FakeHuggingFaceDatasource implements HuggingFaceDatasource {
   final List<HuggingFaceModelResult> defaultResults;
@@ -32,6 +36,19 @@ class FakeHuggingFaceDatasource implements HuggingFaceDatasource {
       return resultsByQuery[query] ?? [];
     }
     return defaultResults;
+  }
+}
+
+class FakeHealthCheckRepository implements HealthCheckRepository {
+  final HealthStatus status;
+  final List<ServiceCard> checkedCards = [];
+
+  FakeHealthCheckRepository(this.status);
+
+  @override
+  Future<HealthStatus> check(ServiceCard card) async {
+    checkedCards.add(card);
+    return status;
   }
 }
 
@@ -144,6 +161,61 @@ OllamaDatasource _failingOllamaDatasource(int statusCode, String message) {
       '{"error": "$message"}',
       statusCode,
       headers: {Headers.contentTypeHeader: ['application/json']},
+    );
+  });
+  return OllamaDatasource(dio);
+}
+
+/// A minimal [HttpClientAdapter] whose `fetch()` always throws.
+class _ThrowingAdapter implements HttpClientAdapter {
+  final Object Function(RequestOptions options) errorBuilder;
+
+  _ThrowingAdapter(this.errorBuilder);
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) {
+    throw errorBuilder(options);
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+/// Builds an [OllamaDatasource] whose `pullModel()` fails with a
+/// connection-level [DioException] (no `response`), as happens when Ollama
+/// becomes unreachable mid-pull.
+OllamaDatasource _unreachableMidPullOllamaDatasource() {
+  final dio = Dio(BaseOptions(baseUrl: 'http://localhost:11434'));
+  dio.httpClientAdapter = _ThrowingAdapter((options) {
+    return DioException(
+      requestOptions: options,
+      type: DioExceptionType.connectionError,
+      message: 'Connection refused',
+    );
+  });
+  return OllamaDatasource(dio);
+}
+
+/// Builds an [OllamaDatasource] whose `pullModel()` fails with a
+/// non-connection [DioException] (a response was received, but its body
+/// isn't the `{"error": ...}` shape `describeChatError` maps) that has no
+/// mapped `ChatRequestException`.
+OllamaDatasource _otherDioErrorOllamaDatasource() {
+  final dio = Dio(BaseOptions(baseUrl: 'http://localhost:11434'));
+  dio.httpClientAdapter = _ThrowingAdapter((options) {
+    return DioException(
+      requestOptions: options,
+      type: DioExceptionType.badResponse,
+      message: 'Unexpected response format',
+      response: Response(
+        requestOptions: options,
+        statusCode: 500,
+        data: 'plain text error body',
+      ),
     );
   });
   return OllamaDatasource(dio);
@@ -330,6 +402,7 @@ void main() {
         FakeHardwareInfoRepository(_hardware),
         ollamaCards: const [_ollamaCard],
         ollamaDatasourceFor: (card) => _fakeOllamaDatasource(lines),
+        healthCheckRepository: FakeHealthCheckRepository(HealthStatus.online),
       );
       await controller.load();
 
@@ -385,6 +458,7 @@ void main() {
           usedCard = card;
           return _fakeOllamaDatasource(lines);
         },
+        healthCheckRepository: FakeHealthCheckRepository(HealthStatus.online),
       );
       await controller.load();
 
@@ -415,6 +489,38 @@ void main() {
       controller.dispose();
     });
 
+    test('an offline health check fails immediately without calling pullModel()', () async {
+      var ollamaDatasourceForCalled = false;
+      final healthCheck = FakeHealthCheckRepository(HealthStatus.offline);
+
+      final controller = ModelDiscoveryController(
+        FakeHuggingFaceDatasource(defaultResults: const [_defaultResult]),
+        FakeHardwareInfoRepository(_hardware),
+        ollamaCards: const [_ollamaCard],
+        healthCheckRepository: healthCheck,
+        ollamaDatasourceFor: (card) {
+          ollamaDatasourceForCalled = true;
+          return _fakeOllamaDatasource([jsonEncode({'status': 'success'})]);
+        },
+      );
+      await controller.load();
+
+      final result = controller.data!.results.single;
+      await controller.download(result);
+
+      final status = controller.data!.results.single.downloadStatus;
+      expect(status, isA<DownloadStatusFailed>());
+      expect(
+        (status as DownloadStatusFailed).message,
+        "Ollama isn't reachable at ${_ollamaCard.fields['baseUrl']}. Make sure it's running.",
+      );
+
+      expect(healthCheck.checkedCards, [_ollamaCard]);
+      expect(ollamaDatasourceForCalled, isFalse);
+
+      controller.dispose();
+    });
+
     test('a failed pull surfaces a failed status with the mapped error message', () async {
       final controller = ModelDiscoveryController(
         FakeHuggingFaceDatasource(defaultResults: const [_defaultResult]),
@@ -422,6 +528,7 @@ void main() {
         ollamaCards: const [_ollamaCard],
         ollamaDatasourceFor: (card) =>
             _failingOllamaDatasource(404, 'pull model manifest: file does not exist'),
+        healthCheckRepository: FakeHealthCheckRepository(HealthStatus.online),
       );
       await controller.load();
 
@@ -434,6 +541,190 @@ void main() {
 
       // Hardware and other state untouched.
       expect(controller.data!.hardware, _hardware);
+
+      controller.dispose();
+    });
+
+    test('a mid-pull connection-level DioException fails with a message naming baseUrl and Dio\'s message',
+        () async {
+      final controller = ModelDiscoveryController(
+        FakeHuggingFaceDatasource(defaultResults: const [_defaultResult]),
+        FakeHardwareInfoRepository(_hardware),
+        ollamaCards: const [_ollamaCard],
+        ollamaDatasourceFor: (card) => _unreachableMidPullOllamaDatasource(),
+        healthCheckRepository: FakeHealthCheckRepository(HealthStatus.online),
+      );
+      await controller.load();
+
+      final result = controller.data!.results.single;
+      await controller.download(result);
+
+      final status = controller.data!.results.single.downloadStatus;
+      expect(status, isA<DownloadStatusFailed>());
+      final message = (status as DownloadStatusFailed).message;
+      expect(
+        message,
+        "Ollama became unreachable at ${_ollamaCard.fields['baseUrl']} (Connection refused). Make sure it's running.",
+      );
+      expect(message, isNot(contains('DioException')));
+
+      controller.dispose();
+    });
+
+    test('any other DioException without a mapped message falls back to e.message ?? e.toString()',
+        () async {
+      final controller = ModelDiscoveryController(
+        FakeHuggingFaceDatasource(defaultResults: const [_defaultResult]),
+        FakeHardwareInfoRepository(_hardware),
+        ollamaCards: const [_ollamaCard],
+        ollamaDatasourceFor: (card) => _otherDioErrorOllamaDatasource(),
+        healthCheckRepository: FakeHealthCheckRepository(HealthStatus.online),
+      );
+      await controller.load();
+
+      final result = controller.data!.results.single;
+      await controller.download(result);
+
+      final status = controller.data!.results.single.downloadStatus;
+      expect(status, isA<DownloadStatusFailed>());
+      expect((status as DownloadStatusFailed).message, 'Unexpected response format');
+
+      controller.dispose();
+    });
+  });
+
+  group('ModelDiscoveryController + HuggingFaceDownloadTracker', () {
+    test('download() mirrors status transitions into the tracker', () async {
+      final lines = [
+        jsonEncode({'status': 'pulling abc123', 'total': 1000, 'completed': 500}),
+        jsonEncode({'status': 'success'}),
+      ];
+      final tracker = HuggingFaceDownloadTracker();
+
+      final controller = ModelDiscoveryController(
+        FakeHuggingFaceDatasource(defaultResults: const [_defaultResult]),
+        FakeHardwareInfoRepository(_hardware),
+        ollamaCards: const [_ollamaCard],
+        ollamaDatasourceFor: (card) => _fakeOllamaDatasource(lines),
+        downloadTracker: tracker,
+        healthCheckRepository: FakeHealthCheckRepository(HealthStatus.online),
+      );
+      await controller.load();
+
+      expect(
+        tracker.statusFor(_defaultResult.repoId, _defaultResult.quant),
+        isA<DownloadStatusIdle>(),
+      );
+
+      await controller.download(controller.data!.results.single);
+
+      expect(
+        tracker.statusFor(_defaultResult.repoId, _defaultResult.quant),
+        isA<DownloadStatusAdded>(),
+      );
+
+      controller.dispose();
+    });
+
+    test('a failed download is mirrored into the tracker', () async {
+      final tracker = HuggingFaceDownloadTracker();
+
+      final controller = ModelDiscoveryController(
+        FakeHuggingFaceDatasource(defaultResults: const [_defaultResult]),
+        FakeHardwareInfoRepository(_hardware),
+        ollamaCards: const [],
+        downloadTracker: tracker,
+      );
+      await controller.load();
+
+      await controller.download(controller.data!.results.single);
+
+      final tracked = tracker.statusFor(_defaultResult.repoId, _defaultResult.quant);
+      expect(tracked, isA<DownloadStatusFailed>());
+      expect((tracked as DownloadStatusFailed).message, contains('No Ollama'));
+
+      controller.dispose();
+    });
+
+    test('a successful download tracks the resolved card\'s id as serviceCardId', () async {
+      final lines = [jsonEncode({'status': 'success'})];
+      final tracker = HuggingFaceDownloadTracker();
+
+      final controller = ModelDiscoveryController(
+        FakeHuggingFaceDatasource(defaultResults: const [_defaultResult]),
+        FakeHardwareInfoRepository(_hardware),
+        ollamaCards: const [_ollamaCard],
+        ollamaDatasourceFor: (card) => _fakeOllamaDatasource(lines),
+        downloadTracker: tracker,
+        healthCheckRepository: FakeHealthCheckRepository(HealthStatus.online),
+      );
+      await controller.load();
+
+      await controller.download(controller.data!.results.single);
+
+      final tracked = tracker.downloadFor(_defaultResult.repoId, _defaultResult.quant);
+      expect(tracked!.serviceCardId, _ollamaCard.id);
+
+      controller.dispose();
+    });
+
+    test('an offline-failed download tracks the resolved card\'s id as serviceCardId', () async {
+      final tracker = HuggingFaceDownloadTracker();
+
+      final controller = ModelDiscoveryController(
+        FakeHuggingFaceDatasource(defaultResults: const [_defaultResult]),
+        FakeHardwareInfoRepository(_hardware),
+        ollamaCards: const [_ollamaCard],
+        downloadTracker: tracker,
+        healthCheckRepository: FakeHealthCheckRepository(HealthStatus.offline),
+      );
+      await controller.load();
+
+      await controller.download(controller.data!.results.single);
+
+      final tracked = tracker.downloadFor(_defaultResult.repoId, _defaultResult.quant);
+      expect(tracked!.serviceCardId, _ollamaCard.id);
+
+      controller.dispose();
+    });
+
+    test('a download with no resolvable card tracks a null serviceCardId', () async {
+      final tracker = HuggingFaceDownloadTracker();
+
+      final controller = ModelDiscoveryController(
+        FakeHuggingFaceDatasource(defaultResults: const [_defaultResult]),
+        FakeHardwareInfoRepository(_hardware),
+        ollamaCards: const [],
+        downloadTracker: tracker,
+      );
+      await controller.load();
+
+      await controller.download(controller.data!.results.single);
+
+      final tracked = tracker.downloadFor(_defaultResult.repoId, _defaultResult.quant);
+      expect(tracked!.serviceCardId, isNull);
+
+      controller.dispose();
+    });
+
+    test('load() initializes downloadStatus from a tracker entry left by a previous controller',
+        () async {
+      final tracker = HuggingFaceDownloadTracker();
+      tracker.track(HuggingFaceDownload(
+        repoId: _defaultResult.repoId,
+        quant: _defaultResult.quant,
+        displayName: _defaultResult.displayName,
+        status: const DownloadStatus.added(),
+      ));
+
+      final controller = ModelDiscoveryController(
+        FakeHuggingFaceDatasource(defaultResults: const [_defaultResult]),
+        FakeHardwareInfoRepository(_hardware),
+        downloadTracker: tracker,
+      );
+      await controller.load();
+
+      expect(controller.data!.results.single.downloadStatus, isA<DownloadStatusAdded>());
 
       controller.dispose();
     });

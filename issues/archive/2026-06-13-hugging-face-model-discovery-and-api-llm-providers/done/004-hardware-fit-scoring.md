@@ -2,7 +2,7 @@
 id: issue-004
 title: "Hardware-fit scoring (VRAM/SPEED/SCORE/FIT/MODE columns)"
 feature: model-discovery
-status: qa
+status: done
 created_at: 2026-06-13
 tags: [afk, p2]
 ---
@@ -94,3 +94,5 @@ _Updated as work progresses._
   covering `estimateVramMb` and all fit/mode classifications incl. no-dGPU hardware, plus
   score/speed ordering); extended `model_discovery_controller_test.dart` with 2 new sort-order
   tests. Full suite: 171/171 passing; `flutter analyze` clean (same 2 pre-existing infos).
+
+QA approved by user on 2026-06-13.

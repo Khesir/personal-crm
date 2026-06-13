@@ -17,7 +17,11 @@ class FakeProcessRunner implements ProcessRunner {
   });
 
   @override
-  Future<ProcessResult> run(String executable, List<String> args) async {
+  Future<ProcessResult> run(
+    String executable,
+    List<String> args, {
+    bool runInShell = false,
+  }) async {
     if (throwing.contains(executable)) {
       throw ProcessException(executable, args, 'not found');
     }
