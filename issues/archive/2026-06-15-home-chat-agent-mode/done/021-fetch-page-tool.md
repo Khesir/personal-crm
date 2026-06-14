@@ -2,7 +2,7 @@
 id: issue-021
 title: "fetch_page tool: fetch a URL and return readable text"
 feature: deep-research
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p2]
 ---
@@ -76,3 +76,5 @@ dispatch tests (dispatched to `FetchPageRepository` not `AgentToolRepository`; "
 
 `flutter test` → 356 passed, 0 failed. `flutter analyze` → clean except the 2 pre-existing
 `deprecated_member_use` infos.
+
+QA approved by user on 2026-06-14.

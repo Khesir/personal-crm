@@ -2,7 +2,7 @@
 id: issue-012
 title: "Anthropic datasource: tool-call parsing"
 feature: home-chat-agent-mode
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p2]
 ---
@@ -84,3 +84,5 @@ Extended `test/features/home/data/datasource/anthropic_datasource_test.dart` wit
 tools omitted/included in `input_schema` shape, tool_use SSE accumulation into `ChatStreamToolCallsRequested`,
 text-only SSE regression (no tool-calls event), tool-role -> `tool_result` mapping, and consecutive
 tool-role merging. All 11 tests in the file pass; `flutter analyze` on touched files is clean.
+
+QA approved by user on 2026-06-14.

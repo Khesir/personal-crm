@@ -2,7 +2,7 @@
 id: issue-020
 title: "Recommended pick: default model selection by hardware fit"
 feature: cookbook-fit
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p2]
 ---
@@ -69,3 +69,5 @@ regardless of order, ignores null `fitResult`, falls back to null for empty/no-f
 `ChatController` test verifying `load()` defaults `activeEntry` to the highest-`fitResult.score`
 entry rather than `cookbook.first`. `flutter test` → 369 passed, `flutter analyze` clean except 2
 pre-existing `deprecated_member_use` infos.
+
+QA approved by user on 2026-06-14.

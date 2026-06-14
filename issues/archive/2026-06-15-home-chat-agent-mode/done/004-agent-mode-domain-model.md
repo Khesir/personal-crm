@@ -2,7 +2,7 @@
 id: issue-004
 title: "Agent-mode domain model: ChatRole.tool, ToolCall, ChatMessage/ChatConversation fields"
 feature: home-chat-agent-mode
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p1]
 ---
@@ -82,3 +82,5 @@ _Updated as work progresses._
   `ChatRole.tool`/`fromValue` fallback, `ToolCall` round trip, old-shape back-compat defaults, new-shape
   round trips, and `copyWith`. `flutter test test/features/home/domain/model/` (10 tests) and
   `flutter analyze` on touched files both pass with no issues.
+
+QA approved by user on 2026-06-14.

@@ -2,7 +2,7 @@
 id: issue-011
 title: "OpenAI-compatible datasource: tool-call parsing"
 feature: home-chat-agent-mode
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p2]
 ---
@@ -86,3 +86,5 @@ in the agent loop sent this assistant message as `{role: "assistant", content: "
 leaving the model without context for the following `tool`-role message and causing it to return an empty
 response. New datasource test added: "echoes an assistant message's tool_calls (with stringified arguments)
 ahead of the tool result".
+
+QA approved by user on 2026-06-14.

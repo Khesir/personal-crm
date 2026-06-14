@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
 import '../../domain/controller/chat_controller.dart';
+import '../../domain/model/agent_loop_constants.dart';
 import '../../domain/model/chat_conversation.dart';
 import '../../domain/model/chat_message.dart';
 import '../state/chat_state.dart';
@@ -85,8 +86,10 @@ class _Header extends StatelessWidget {
               style: AppStyling.pageTitle,
             ),
           ),
-          const SizedBox(width: AppStyling.spaceMd),
-          ChatModeToggle(controller: controller, conversation: state.activeConversation),
+          if (kAgentModeEnabled) ...[
+            const SizedBox(width: AppStyling.spaceMd),
+            ChatModeToggle(controller: controller, conversation: state.activeConversation),
+          ],
           const SizedBox(width: AppStyling.spaceMd),
           ModelSwitcher(
             entries: state.cookbook,
@@ -108,7 +111,8 @@ class _MessageList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final messages = conversation.messages;
-    final showStepCards = conversation.workingProjectId != null || conversation.isDeepResearch;
+    final showStepCards = kAgentModeEnabled &&
+        (conversation.workingProjectId != null || conversation.isDeepResearch);
 
     return ListView(
       padding: const EdgeInsets.all(AppStyling.spaceLg),

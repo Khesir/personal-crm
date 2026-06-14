@@ -2,7 +2,7 @@
 id: issue-016
 title: "run_command tool: cwd-scoped execution with mandatory Approve/Reject"
 feature: agent-shell-access
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p1]
 ---
@@ -123,3 +123,14 @@ tool result message (this is the part of the round trip the datasource bug previ
 broke at the JSON layer — the fake repo operates on domain objects, so the gap was only
 in test coverage, not logic). flutter test: 379 passed. flutter analyze: clean (2
 pre-existing deprecated_member_use infos only, unrelated to this issue).
+
+QA rejected again on 2026-06-14 (real-world visual QA, after the fix above). Agent mode itself
+remains unusable in real-world testing (tool calls/step cards still don't reliably trigger, and
+when they do the UI is broken — see issue 010's latest rejection), so `run_command`'s
+Approve/Reject step card still couldn't be exercised end-to-end. Agent and Research modes have
+been disabled (Home chat is chat-only for now) via the `kAgentModeEnabled = false` switch in
+`agent_loop_constants.dart`, and this feature area — including `run_command` — will be
+redesigned under a new PRD. See `docs/handoffs/handoff-agent-mode-redesign.md`.
+
+Moved to Done on 2026-06-15 — closing out this PRD cycle (not QA-approved; superseded by a new
+PRD, see docs/handoffs/handoff-agent-mode-redesign.md).

@@ -2,7 +2,7 @@
 id: issue-018
 title: "Cookbook fit-result computation for local models"
 feature: cookbook-fit
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p2]
 ---
@@ -76,3 +76,5 @@ Tests added: `model_name_parser_test.dart` (6 cases), `cookbook_entry_test.dart`
 
 `flutter test` → 345 passed, 0 failed. `flutter analyze` → clean except the 2 pre-existing
 `deprecated_member_use` infos.
+
+QA approved by user on 2026-06-14.

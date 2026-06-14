@@ -2,7 +2,7 @@
 id: issue-022
 title: "Deep Research mode"
 feature: deep-research
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p2]
 ---
@@ -126,3 +126,14 @@ _To be investigated during implementation._
 - [ ] Bug no longer reproduces
 - [ ] Original acceptance criteria still met
 - [ ] A test exists that would have caught this
+
+QA rejected again on 2026-06-14 (real-world visual QA, after the "Bug fixed on 2026-06-14" note
+above). Agent mode itself remains unusable in real-world testing (tool calls/step cards still
+don't reliably trigger, and when they do the UI is broken — see issue 010's latest rejection), so
+Deep Research still couldn't be exercised end-to-end. Agent and Research modes have been disabled
+(Home chat is chat-only for now) via the `kAgentModeEnabled = false` switch in
+`agent_loop_constants.dart`, and this feature area — including Deep Research — will be redesigned
+under a new PRD. See `docs/handoffs/handoff-agent-mode-redesign.md`.
+
+Moved to Done on 2026-06-15 — closing out this PRD cycle (not QA-approved; superseded by a new
+PRD, see docs/handoffs/handoff-agent-mode-redesign.md).

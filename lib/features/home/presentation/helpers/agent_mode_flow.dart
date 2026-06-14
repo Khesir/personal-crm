@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:crm/features/settings/domain/model/project.dart';
 import '../../domain/controller/chat_controller.dart';
+import '../../domain/model/agent_loop_constants.dart';
 import '../../domain/model/cookbook_entry.dart';
 import '../dialogs/agent_mode_picker_dialog.dart';
 import '../dialogs/new_chat_dialog.dart';
@@ -15,6 +16,11 @@ List<CookbookEntry> agentCapableCookbook(ChatController controller) {
 /// plain conversation or (if Agent mode was enabled and a project/model was
 /// picked) an agent-mode conversation.
 Future<void> startNewChat(BuildContext context, ChatController controller) async {
+  if (!kAgentModeEnabled) {
+    controller.newConversation();
+    return;
+  }
+
   final projectsRepository = controller.projectsRepository;
   final projects = projectsRepository != null
       ? await projectsRepository.getProjects()

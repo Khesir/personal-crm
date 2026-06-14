@@ -2,7 +2,7 @@
 id: issue-008
 title: "ChatController agent loop: tool execution, write approvals, reference-project trust, step limit"
 feature: home-chat-agent-mode
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p1]
 ---
@@ -126,3 +126,5 @@ _Updated as work progresses._
   `kMaxAgentLoopSteps` cutoff, and pending-state persistence across a simulated restart. Also added 3 `applyWrite` unit tests to
   `agent_tool_repository_impl_test.dart`. `flutter test test/features/home/` -> 79/79 passing. `flutter analyze` on all touched
   files -> no issues (2 pre-existing unrelated deprecation warnings elsewhere in the repo).
+
+QA approved by user on 2026-06-14.

@@ -2,7 +2,7 @@
 id: issue-015
 title: "Agent web search tool: SearXNG-backed web_search for agent-mode conversations"
 feature: home-chat-agent-mode
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p2]
 ---
@@ -157,3 +157,14 @@ call's history includes the assistant message's `toolCalls` (id `call-1`, name `
 and the corresponding `tool`-role result message with the search results text — confirming
 the agent loop's domain-level round trip was always correct, and that issue 010's datasource
 serialization fix is what unblocks the visual "Agent uses web search" checklist item.
+
+QA rejected again on 2026-06-14 (real-world visual QA, after the fix above). Agent mode itself
+remains unusable in real-world testing (tool calls/step cards still don't reliably trigger, and
+when they do the UI is broken — see issue 010's latest rejection), so `web_search` still couldn't
+be exercised end-to-end. Agent and Research modes have been disabled (Home chat is chat-only for
+now) via the `kAgentModeEnabled = false` switch in `agent_loop_constants.dart`, and this feature
+area — including `web_search` — will be redesigned under a new PRD. See
+`docs/handoffs/handoff-agent-mode-redesign.md`.
+
+Moved to Done on 2026-06-15 — closing out this PRD cycle (not QA-approved; superseded by a new
+PRD, see docs/handoffs/handoff-agent-mode-redesign.md).

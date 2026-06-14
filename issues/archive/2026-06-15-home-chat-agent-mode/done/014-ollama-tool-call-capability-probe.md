@@ -2,7 +2,7 @@
 id: issue-014
 title: "Ollama supportsTools: live capability probe to catch models that don't actually emit tool_calls"
 feature: home-chat-agent-mode
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p3]
 ---
@@ -89,3 +89,5 @@ scenarios above.
   probe response is plain text (asserts `supportsTools: false`, reproducing the scan2.png scenario).
   `flutter test` passes (317 tests, was 316); `flutter analyze` clean (only the 2 pre-existing
   `deprecated_member_use` infos).
+
+QA approved by user on 2026-06-14.

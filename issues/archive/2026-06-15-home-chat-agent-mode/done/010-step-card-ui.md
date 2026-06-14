@@ -2,7 +2,7 @@
 id: issue-010
 title: "Step-card UI: collapsible tool-call cards, diffs, approve/reject, reference-project confirmation"
 feature: home-chat-agent-mode
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p2]
 ---
@@ -110,3 +110,14 @@ second `streamChat` call (after a tool result is appended) sent that assistant m
 returned an empty response — rendering as an empty bubble with no step card. `AnthropicDatasource` already
 serialized this correctly and was left unchanged. Added datasource-level regression tests for both providers
 asserting the request body includes the echoed `tool_calls`.
+
+QA rejected again on 2026-06-14 (real-world visual QA, after the fix above). Reported: tool
+calls/step cards still don't reliably trigger; when a step card does render, the UI is broken; in
+some cases there isn't even a way to get a normal reply; and the Chat/Agent/Research toggle doesn't
+read as a distinct "agent mode" — it looks and behaves like plain chat. Rather than another
+fix-and-reverify cycle, Agent and Research modes have been disabled (Home chat is chat-only for
+now) via the `kAgentModeEnabled = false` switch in `agent_loop_constants.dart`, and this feature
+area will be redesigned under a new PRD. See `docs/handoffs/handoff-agent-mode-redesign.md`.
+
+Moved to Done on 2026-06-15 — closing out this PRD cycle (not QA-approved; superseded by a new
+PRD, see docs/handoffs/handoff-agent-mode-redesign.md).

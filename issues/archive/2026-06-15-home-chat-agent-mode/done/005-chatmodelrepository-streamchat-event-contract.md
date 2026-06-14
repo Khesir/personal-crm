@@ -2,7 +2,7 @@
 id: issue-005
 title: "ChatModelRepository.streamChat() contract change: ChatStreamEvent + ToolDefinition"
 feature: home-chat-agent-mode
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p1]
 ---
@@ -80,3 +80,5 @@ _Updated as work progresses._
 - Added `ChatStreamEvent` (sealed, `ChatStreamTextDelta`/`ChatStreamToolCallsRequested`) and `ToolDefinition` models.
 - Changed `ChatModelRepository.streamChat()` to `Stream<ChatStreamEvent>` with optional `tools` param; updated Ollama, OpenAI-compatible, and Anthropic datasources/repositories to wrap text chunks in `ChatStreamTextDelta`. `ChatController.sendMessage()` now switches on the event type, appending text deltas exactly as before and no-op'ing on tool-call-requested events.
 - Updated `chat_controller_test.dart` fakes and `anthropic_datasource_test.dart` to the new event-wrapped shape. `flutter test test/features/home/` (42 tests) and `flutter analyze` on all touched files pass with no new issues.
+
+QA approved by user on 2026-06-14.

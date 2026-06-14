@@ -2,7 +2,7 @@
 id: issue-006
 title: "AgentToolRepository: file tools (read_file, list_dir, grep, write_file, edit_file) with path-boundary enforcement"
 feature: home-chat-agent-mode
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p1]
 ---
@@ -106,3 +106,5 @@ _Updated as work progresses._
   existing-path and zero/multiple-match errors, and the working/trusted-reference/untrusted-
   reference/unknown-path boundary matrix. `flutter test` (18/18 passing) and `flutter analyze`
   (no issues) both clean.
+
+QA approved by user on 2026-06-14.

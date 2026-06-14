@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
 import '../../domain/controller/chat_controller.dart';
+import '../../domain/model/agent_loop_constants.dart';
 import '../helpers/agent_mode_flow.dart';
 import '../helpers/relative_time.dart';
 import '../state/chat_state.dart';
@@ -134,7 +135,7 @@ class _ConversationItemState extends State<_ConversationItem> {
                 ),
               ),
               const SizedBox(width: AppStyling.spaceSm),
-              if (_hovered)
+              if (_hovered && kAgentModeEnabled)
                 _ConversationMenuButton(onBranchIntoAgentMode: widget.onBranchIntoAgentMode)
               else
                 Text(widget.timestamp, style: AppStyling.label),

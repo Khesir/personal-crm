@@ -2,7 +2,7 @@
 id: issue-007
 title: "Ollama datasource: tool-call parsing (send tools, parse message.tool_calls)"
 feature: home-chat-agent-mode
-status: qa
+status: done
 created_at: 2026-06-14
 tags: [afk, p1]
 ---
@@ -77,3 +77,5 @@ Ollama's `/api/chat` shape) when non-empty — previously the second `streamChat
 this assistant message as `{role: "assistant", content: ""}` with no `tool_calls`, leaving the model without
 context for the following `tool`-role message and causing it to return an empty response. New datasource test
 added: "echoes an assistant message's tool_calls (with object arguments) ahead of the tool result".
+
+QA approved by user on 2026-06-14.
