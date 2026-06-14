@@ -17,6 +17,7 @@ const Map<ServiceType, String> kServiceTypeLabels = {
   ServiceType.mistral: 'Mistral',
   ServiceType.nvidia: 'NVIDIA',
   ServiceType.openCodeZen: 'OpenCode Zen',
+  ServiceType.searxng: 'SearXNG',
 };
 
 /// Preset API base URL used to pre-fill the `baseUrl` field when a new card
@@ -31,4 +32,5 @@ const Map<ServiceType, String> kServiceTypeDefaultBaseUrls = {
   ServiceType.mistral: 'https://api.mistral.ai/v1',
   ServiceType.nvidia: 'https://integrate.api.nvidia.com/v1',
   ServiceType.openCodeZen: 'https://opencode.ai/zen/v1',
+  ServiceType.searxng: 'http://localhost:8080',
 };

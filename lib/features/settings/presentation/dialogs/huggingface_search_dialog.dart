@@ -8,6 +8,7 @@ import '../../domain/model/model_discovery_result.dart';
 import '../../domain/model/model_discovery_state.dart';
 import '../../domain/model/model_fit_result.dart';
 import '../../domain/model/service_card.dart';
+import '../widget/fit_badge.dart';
 import '../widget/huggingface_download_status_widgets.dart';
 
 const _kDialogWidth = 820.0;
@@ -342,7 +343,7 @@ class _ResultRow extends StatelessWidget {
             flex: 1,
             child: Text(_formatScore(fit.score), style: AppStyling.mono),
           ),
-          Expanded(flex: 1, child: _FitBadge(fit: fit.fit)),
+          Expanded(flex: 1, child: FitBadge(fit: fit.fit)),
           Expanded(flex: 1, child: Text(_modeLabel(fit.mode), style: AppStyling.monoSm)),
           Expanded(
             flex: 2,
@@ -517,38 +518,3 @@ class _OllamaCardPickerDialog extends StatelessWidget {
   }
 }
 
-/// Small color-coded badge summarizing [ModelFitResult.fit].
-class _FitBadge extends StatelessWidget {
-  final Fit fit;
-
-  const _FitBadge({required this.fit});
-
-  Color get _color => switch (fit) {
-        Fit.perfect => AppColors.success,
-        Fit.good => AppColors.info,
-        Fit.cpuOnly => AppColors.warning,
-        Fit.tooBig => AppColors.error,
-      };
-
-  String get _label => switch (fit) {
-        Fit.perfect => 'PERFECT',
-        Fit.good => 'GOOD',
-        Fit.cpuOnly => 'CPU ONLY',
-        Fit.tooBig => 'TOO BIG',
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppStyling.spaceSm, vertical: 2),
-      decoration: BoxDecoration(
-        color: _color.withAlpha(0x29),
-        borderRadius: BorderRadius.circular(AppStyling.radiusSm),
-      ),
-      child: Text(
-        _label,
-        style: AppStyling.monoSm.copyWith(color: _color),
-      ),
-    );
-  }
-}

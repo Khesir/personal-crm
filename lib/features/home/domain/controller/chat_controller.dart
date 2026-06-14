@@ -1,28 +1,69 @@
 import 'package:crm/core/state/state.dart';
 import 'package:crm/features/brain/api.dart';
+import 'package:crm/features/home/data/repository/ollama_repository_impl.dart';
+import 'package:crm/features/settings/domain/model/fit_scorer.dart';
+import 'package:crm/features/settings/domain/model/hardware_info.dart';
+import 'package:crm/features/settings/domain/model/model_fit_result.dart';
+import 'package:crm/features/settings/domain/model/model_name_parser.dart';
 import 'package:crm/features/settings/domain/model/service_card.dart';
+import 'package:crm/features/settings/domain/repository/hardware_info_repository.dart';
+import 'package:crm/features/settings/domain/repository/projects_repository.dart';
 import 'package:crm/features/settings/domain/repository/service_cards_repository.dart';
 import '../../presentation/state/chat_state.dart';
+import '../model/agent_loop_constants.dart';
 import '../model/chat_conversation.dart';
 import '../model/chat_message.dart';
+import '../model/chat_stream_event.dart';
 import '../model/cookbook_entry.dart';
+import '../model/tool_execution_result.dart';
+import '../repository/agent_tool_repository.dart';
 import '../repository/chat_conversations_repository.dart';
 import '../repository/chat_model_repository.dart';
+import '../repository/command_execution_repository.dart';
+import '../repository/fetch_page_repository.dart';
+import '../repository/web_search_repository.dart';
+import 'agent_loop_runner.dart';
 
 class ChatController extends StreamState<ChatStateData> {
   final ServiceCardsRepository serviceCardsRepository;
   final ChatModelRepository Function(ServiceCard card) repositoryFor;
   final ChatConversationsRepository conversationsRepository;
   final BrainRepository brainRepository;
+  final ProjectsRepository? projectsRepository;
+  final AgentToolRepository? agentToolRepository;
+  final WebSearchRepository? webSearchRepository;
+  final CommandExecutionRepository? commandExecutionRepository;
+  final HardwareInfoRepository? hardwareInfoRepository;
+  final FetchPageRepository? fetchPageRepository;
 
   List<ServiceCard> _cookbookCards = [];
+  AgentLoopRunner? _agentLoopRunner;
+  HardwareInfo? _hardwareInfo;
 
   ChatController(
     this.serviceCardsRepository,
     this.repositoryFor,
     this.conversationsRepository,
-    this.brainRepository,
-  ) : super(const ChatStateData());
+    this.brainRepository, {
+    this.projectsRepository,
+    this.agentToolRepository,
+    this.webSearchRepository,
+    this.commandExecutionRepository,
+    this.hardwareInfoRepository,
+    this.fetchPageRepository,
+  }) : super(const ChatStateData()) {
+    final projects = projectsRepository;
+    final agentTools = agentToolRepository;
+    if (projects != null && agentTools != null) {
+      _agentLoopRunner = AgentLoopRunner(
+        agentToolRepository: agentTools,
+        projectsRepository: projects,
+        webSearchRepository: webSearchRepository,
+        commandExecutionRepository: commandExecutionRepository,
+        fetchPageRepository: fetchPageRepository,
+      );
+    }
+  }
 
   Future<void> load() async {
     final conversations = await conversationsRepository.getConversations();
@@ -50,7 +91,8 @@ class ChatController extends StreamState<ChatStateData> {
     final cookbook = <CookbookEntry>[];
     for (final card in _cookbookCards) {
       try {
-        final models = await repositoryFor(card).listModels();
+        final repo = repositoryFor(card);
+        final models = await repo.listModels();
         for (final model in models) {
           if (!card.disabledModels.contains(model)) {
             cookbook.add(CookbookEntry(
@@ -58,6 +100,10 @@ class ChatController extends StreamState<ChatStateData> {
               cardName: card.name,
               cardType: card.type,
               model: model,
+              supportsTools: await _supportsTools(card, repo, model),
+              fitResult: card.category == ServiceCategory.localLlm
+                  ? await _fitResultFor(model)
+                  : null,
             ));
           }
         }
@@ -73,9 +119,55 @@ class ChatController extends StreamState<ChatStateData> {
       cookbook: cookbook,
       activeEntry: keepPrevious
           ? previous
-          : (cookbook.isNotEmpty ? cookbook.first : null),
+          : (recommendedCookbookEntry(cookbook) ??
+              (cookbook.isNotEmpty ? cookbook.first : null)),
       clearActiveEntry: !keepPrevious && cookbook.isEmpty,
     ));
+  }
+
+  /// For [ServiceType.ollama] cards, queries `/api/show` for [model]'s
+  /// capabilities and returns whether `"tools"` is present. Defaults to
+  /// `false` (fail closed) if the request errors, so agent mode is never
+  /// offered for a model whose capabilities couldn't be determined.
+  ///
+  /// For all other [ServiceType]s, tool support is assumed and this returns
+  /// `true`.
+  Future<bool> _supportsTools(ServiceCard card, ChatModelRepository repo, String model) async {
+    if (card.type != ServiceType.ollama) return true;
+    if (repo is! OllamaRepositoryImpl) return false;
+    try {
+      return await repo.supportsTools(model);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Scores [model]'s name/tag against the cached [HardwareInfo] via
+  /// [FitScorer]. Returns null if the name doesn't parse into a parameter
+  /// count and quantization, or if [hardwareInfoRepository] isn't
+  /// configured.
+  Future<ModelFitResult?> _fitResultFor(String model) async {
+    final paramsBillions = ModelNameParser.parseParamsBillions(model);
+    final quant = ModelNameParser.parseQuant(model);
+    if (paramsBillions == null || quant == null) return null;
+
+    final hardware = await _ensureHardwareInfo();
+    if (hardware == null) return null;
+
+    return FitScorer.score(hardware: hardware, paramsBillions: paramsBillions, quant: quant);
+  }
+
+  /// Detects and caches [HardwareInfo] for the lifetime of this controller —
+  /// detection involves running external processes, so it is not re-run on
+  /// every [refresh].
+  Future<HardwareInfo?> _ensureHardwareInfo() async {
+    final repo = hardwareInfoRepository;
+    if (repo == null) return null;
+    final cached = _hardwareInfo;
+    if (cached != null) return cached;
+    final detected = await repo.detect();
+    _hardwareInfo = detected;
+    return detected;
   }
 
   void newConversation() {
@@ -90,6 +182,83 @@ class ChatController extends StreamState<ChatStateData> {
     emit(state.copyWith(
       conversations: [conversation, ...state.conversations],
       activeConversationId: conversation.id,
+    ));
+    _persist();
+  }
+
+  /// Creates a new agent-mode conversation with [projectId] as its
+  /// `workingProjectId` and [entry] as the active model. Mirrors
+  /// [newConversation], but sets the working project and active entry at
+  /// creation time — `workingProjectId` is immutable thereafter.
+  void newAgentConversation(String projectId, CookbookEntry entry, {bool shellAccessEnabled = false}) {
+    final now = DateTime.now();
+    final conversation = ChatConversation(
+      id: now.microsecondsSinceEpoch.toString(),
+      title: 'New chat',
+      createdAt: now,
+      updatedAt: now,
+      messages: const [],
+      workingProjectId: projectId,
+      shellAccessEnabled: shellAccessEnabled,
+    );
+    emit(state.copyWith(
+      conversations: [conversation, ...state.conversations],
+      activeConversationId: conversation.id,
+      activeEntry: entry,
+    ));
+    _persist();
+  }
+
+  /// Creates a new agent-mode conversation that branches off
+  /// [sourceConversationId]: a deep copy of its messages at branch time,
+  /// with [projectId] as the new conversation's `workingProjectId` and
+  /// [entry] as its active model. The source conversation is left
+  /// unchanged.
+  void branchIntoAgentMode(
+    String sourceConversationId,
+    String projectId,
+    CookbookEntry entry, {
+    bool shellAccessEnabled = false,
+  }) {
+    final source = _findConversation(sourceConversationId);
+    if (source == null) return;
+
+    final now = DateTime.now();
+    final conversation = ChatConversation(
+      id: now.microsecondsSinceEpoch.toString(),
+      title: source.title,
+      createdAt: now,
+      updatedAt: now,
+      messages: [for (final message in source.messages) message.copyWith()],
+      workingProjectId: projectId,
+      shellAccessEnabled: shellAccessEnabled,
+    );
+    emit(state.copyWith(
+      conversations: [conversation, ...state.conversations],
+      activeConversationId: conversation.id,
+      activeEntry: entry,
+    ));
+    _persist();
+  }
+
+  /// Creates a new Deep Research conversation with [entry] as its active
+  /// model. Mirrors [newConversation], but sets `isDeepResearch: true` and
+  /// the active entry at creation time — like `workingProjectId`,
+  /// `isDeepResearch` is immutable thereafter.
+  void newDeepResearchConversation(CookbookEntry entry) {
+    final now = DateTime.now();
+    final conversation = ChatConversation(
+      id: now.microsecondsSinceEpoch.toString(),
+      title: 'New chat',
+      createdAt: now,
+      updatedAt: now,
+      messages: const [],
+      isDeepResearch: true,
+    );
+    emit(state.copyWith(
+      conversations: [conversation, ...state.conversations],
+      activeConversationId: conversation.id,
+      activeEntry: entry,
     ));
     _persist();
   }
@@ -151,17 +320,24 @@ class ChatController extends StreamState<ChatStateData> {
     emit(state.copyWith(isStreaming: true));
 
     final history = [...conversation.messages, userMessage];
-
-    final systemPrompt = await brainRepository.buildSystemPrompt();
-    final requestMessages = systemPrompt != null
-        ? [ChatMessage(role: ChatRole.system, content: systemPrompt), ...history]
-        : history;
-
+    final requestMessages = await _buildRequestMessages(history, deepResearch: conversation.isDeepResearch);
     final repo = repositoryFor(card);
+    final runner = _agentLoopRunner;
+    final isAgentMode =
+        (conversation.workingProjectId != null || conversation.isDeepResearch) && runner != null;
 
     try {
-      await for (final chunk in repo.streamChat(model: entry.model, messages: requestMessages)) {
-        _appendToLastMessage(conversation.id, chunk);
+      if (isAgentMode) {
+        await runner.runTurn(_agentLoopContext(conversation.id, repo, entry.model), requestMessages);
+      } else {
+        await for (final event in repo.streamChat(model: entry.model, messages: requestMessages)) {
+          switch (event) {
+            case ChatStreamTextDelta(text: final text):
+              _appendToLastMessage(conversation.id, text);
+            case ChatStreamToolCallsRequested():
+              break;
+          }
+        }
       }
     } catch (e) {
       _setErrorMessage(conversation.id, e);
@@ -170,6 +346,133 @@ class ChatController extends StreamState<ChatStateData> {
       emit(state.copyWith(isStreaming: false));
       _persist();
     }
+  }
+
+  /// Approves the pending write/edit identified by [toolCallId] in
+  /// [conversationId]'s last assistant message: applies it to disk via
+  /// [AgentToolRepository.applyWrite], records the real result, and resumes
+  /// the agent loop.
+  Future<void> approveToolCall(String conversationId, String toolCallId) async {
+    await _runApprovalStep(conversationId, (runner, ctx) {
+      return runner.approveToolCall(ctx, toolCallId);
+    });
+  }
+
+  /// Rejects the pending write/edit identified by [toolCallId]: records a
+  /// "rejected by user" result without touching disk, and resumes the
+  /// agent loop.
+  Future<void> rejectToolCall(String conversationId, String toolCallId) async {
+    await _runApprovalStep(conversationId, (runner, ctx) {
+      return runner.rejectToolCall(ctx, toolCallId);
+    });
+  }
+
+  /// Adds [projectId] to [conversationId]'s `trustedReferenceProjectIds`,
+  /// re-attempts the tool call identified by [toolCallId], and resumes the
+  /// agent loop with whatever result it now resolves to.
+  Future<void> allowReferenceProject(String conversationId, String toolCallId, String projectId) async {
+    await _runApprovalStep(conversationId, (runner, ctx) {
+      return runner.allowReferenceProject(ctx, toolCallId, projectId);
+    });
+  }
+
+  /// Records that read access to the reference project behind [toolCallId]
+  /// was denied, and resumes the agent loop without granting access.
+  Future<void> denyReferenceProject(String conversationId, String toolCallId, String projectId) async {
+    await _runApprovalStep(conversationId, (runner, ctx) {
+      return runner.denyReferenceProject(ctx, toolCallId);
+    });
+  }
+
+  /// Read-only preview of what the pending tool call identified by
+  /// [toolCallId] in [conversationId] would resolve to (e.g. a
+  /// [ToolReferenceConfirmationNeeded] needing a project name for display),
+  /// without mutating the conversation or touching disk. Returns `null` if
+  /// [toolCallId] isn't a pending call, or if agent mode isn't configured.
+  Future<ToolExecutionResult?> previewPendingToolCall(String conversationId, String toolCallId) async {
+    final runner = _agentLoopRunner;
+    final entry = state.activeEntry;
+    if (runner == null || entry == null) return null;
+
+    ServiceCard? card;
+    for (final c in _cookbookCards) {
+      if (c.id == entry.cardId) {
+        card = c;
+        break;
+      }
+    }
+    if (card == null) return null;
+
+    return runner.previewPendingToolCall(
+      _agentLoopContext(conversationId, repositoryFor(card), entry.model),
+      toolCallId,
+    );
+  }
+
+  /// Shared setup for the four approval/rejection methods: resolves the
+  /// conversation's active model/repository, runs [step], then settles
+  /// `isStreaming` and persists.
+  Future<void> _runApprovalStep(
+    String conversationId,
+    Future<void> Function(AgentLoopRunner runner, AgentLoopContext ctx) step,
+  ) async {
+    final runner = _agentLoopRunner;
+    final entry = state.activeEntry;
+    if (runner == null || entry == null) return;
+
+    ServiceCard? card;
+    for (final c in _cookbookCards) {
+      if (c.id == entry.cardId) {
+        card = c;
+        break;
+      }
+    }
+    if (card == null) return;
+
+    emit(state.copyWith(isStreaming: true));
+    try {
+      await step(runner, _agentLoopContext(conversationId, repositoryFor(card), entry.model));
+    } finally {
+      _finishStreaming(conversationId);
+      emit(state.copyWith(isStreaming: false));
+      _persist();
+    }
+  }
+
+  AgentLoopContext _agentLoopContext(String conversationId, ChatModelRepository repo, String model) {
+    return AgentLoopContext(
+      ops: AgentLoopOps(
+        findConversation: _findConversation,
+        updateConversation: (id, {messages, trustedReferenceProjectIds}) => _updateConversation(
+          id,
+          messages: messages,
+          trustedReferenceProjectIds: trustedReferenceProjectIds,
+        ),
+        persist: _persist,
+      ),
+      conversationId: conversationId,
+      repo: repo,
+      model: model,
+      appendToLastMessage: _appendToLastMessage,
+      buildRequestMessages: (history) => _buildRequestMessages(
+        history,
+        deepResearch: _findConversation(conversationId)?.isDeepResearch ?? false,
+      ),
+    );
+  }
+
+  Future<List<ChatMessage>> _buildRequestMessages(
+    List<ChatMessage> history, {
+    bool deepResearch = false,
+  }) async {
+    final systemPrompt = await brainRepository.buildSystemPrompt();
+    final systemParts = [
+      if (systemPrompt != null) systemPrompt,
+      if (deepResearch) kDeepResearchSystemPromptAddition,
+    ];
+    return systemParts.isNotEmpty
+        ? [ChatMessage(role: ChatRole.system, content: systemParts.join('\n\n')), ...history]
+        : history;
   }
 
   /// Replaces the content of the last (assistant) message with a short,
@@ -229,6 +532,7 @@ class ChatController extends StreamState<ChatStateData> {
     String id, {
     List<ChatMessage>? messages,
     String? title,
+    List<String>? trustedReferenceProjectIds,
   }) {
     final now = DateTime.now();
     final conversations = [
@@ -238,6 +542,7 @@ class ChatController extends StreamState<ChatStateData> {
             messages: messages,
             title: title,
             updatedAt: now,
+            trustedReferenceProjectIds: trustedReferenceProjectIds,
           )
         else
           conversation,

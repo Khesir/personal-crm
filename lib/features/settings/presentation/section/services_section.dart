@@ -72,7 +72,7 @@ class _ServicesSectionState extends State<ServicesSection> {
             title: 'Services',
             category: ServiceCategory.services,
             controller: widget.controller,
-            availableTypes: const [ServiceType.n8n, ServiceType.customUrl],
+            availableTypes: const [ServiceType.n8n, ServiceType.customUrl, ServiceType.searxng],
           ),
         ],
       ),

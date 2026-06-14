@@ -21,6 +21,7 @@ class ServiceCardsController extends StreamState<AsyncState<List<ServiceCard>>> 
     ServiceType.ollama,
     ServiceType.n8n,
     ServiceType.customUrl,
+    ServiceType.searxng,
   };
 
   /// Per-card health status, keyed by card id.

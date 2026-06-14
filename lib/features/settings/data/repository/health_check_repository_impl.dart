@@ -12,6 +12,7 @@ class HealthCheckRepositoryImpl implements HealthCheckRepository {
     switch (card.type) {
       case ServiceType.n8n:
       case ServiceType.customUrl:
+      case ServiceType.searxng:
         return _checkUniformGet(card);
       case ServiceType.ollama:
         return _checkStatusAware(card, '/api/tags');

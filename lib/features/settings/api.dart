@@ -13,6 +13,7 @@ export 'domain/model/project.dart';
 export 'domain/model/service_card.dart';
 export 'domain/model/health_status.dart';
 export 'presentation/dialogs/huggingface_search_dialog.dart';
+export 'presentation/widget/fit_badge.dart';
 export 'presentation/section/services_section.dart';
 export 'presentation/section/about_section.dart';
 export 'presentation/section/brain_section.dart';

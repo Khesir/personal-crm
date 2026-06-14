@@ -9,6 +9,7 @@ const Map<String, String> kServiceTypeDefaults = {
   'n8n.baseUrl': 'http://localhost:5678',
   'customUrl.baseUrl': 'http://localhost:3000',
   'customUrl.secret': '',
+  'searxng.baseUrl': 'http://localhost:8080',
 };
 
 /// Service types whose default-or-only card is indexed into [ServiceCardsCache]
@@ -17,6 +18,7 @@ const _kBackCompatTypes = {
   ServiceType.ollama,
   ServiceType.n8n,
   ServiceType.customUrl,
+  ServiceType.searxng,
 };
 
 /// In-memory, synchronous cache of the back-compat service cards' field

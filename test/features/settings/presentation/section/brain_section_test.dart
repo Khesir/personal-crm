@@ -22,6 +22,17 @@ class FakeProcessRunner implements ProcessRunner {
     lastRunInShell = runInShell;
     return ProcessResult(0, 0, '', '');
   }
+
+  @override
+  Future<ProcessResult> runWithTimeout(
+    String executable,
+    List<String> args, {
+    required String workingDirectory,
+    required Duration timeout,
+    bool runInShell = false,
+  }) {
+    return run(executable, args, runInShell: runInShell);
+  }
 }
 
 void main() {

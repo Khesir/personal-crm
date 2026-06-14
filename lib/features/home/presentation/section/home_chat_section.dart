@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
 import '../../domain/controller/chat_controller.dart';
+import '../../domain/model/chat_conversation.dart';
 import '../../domain/model/chat_message.dart';
 import '../state/chat_state.dart';
 import '../widget/chat_message_bubble.dart';
+import '../widget/chat_mode_toggle.dart';
 import '../widget/composer.dart';
 import '../widget/model_switcher.dart';
 import '../widget/suggested_prompt_chip.dart';
+import 'agent_step_list.dart';
 
 const _suggestedPrompts = [
   'Summarize this codebase',
@@ -41,7 +44,7 @@ class HomeChatSection extends StatelessWidget {
               Container(height: 1, color: AppColors.border),
               Expanded(
                 child: hasMessages
-                    ? _MessageList(messages: conversation.messages)
+                    ? _MessageList(controller: controller, conversation: conversation)
                     : _EmptyState(controller: controller, state: state),
               ),
               if (hasMessages)
@@ -83,6 +86,8 @@ class _Header extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppStyling.spaceMd),
+          ChatModeToggle(controller: controller, conversation: state.activeConversation),
+          const SizedBox(width: AppStyling.spaceMd),
           ModelSwitcher(
             entries: state.cookbook,
             activeEntry: state.activeEntry,
@@ -95,19 +100,36 @@ class _Header extends StatelessWidget {
 }
 
 class _MessageList extends StatelessWidget {
-  final List<ChatMessage> messages;
+  final ChatController controller;
+  final ChatConversation conversation;
 
-  const _MessageList({required this.messages});
+  const _MessageList({required this.controller, required this.conversation});
 
   @override
   Widget build(BuildContext context) {
+    final messages = conversation.messages;
+    final showStepCards = conversation.workingProjectId != null || conversation.isDeepResearch;
+
     return ListView(
       padding: const EdgeInsets.all(AppStyling.spaceLg),
       children: [
-        for (final message in messages)
-          message.role == ChatRole.user
-              ? UserMsg(content: message.content)
-              : BotMsg(content: message.content, streaming: message.streaming),
+        for (final message in messages) ...[
+          if (message.role == ChatRole.user)
+            UserMsg(content: message.content)
+          else if (message.role == ChatRole.assistant) ...[
+            if (showStepCards && message.toolCalls.isNotEmpty) ...[
+              AgentStepList(
+                controller: controller,
+                conversationId: conversation.id,
+                conversationMessages: messages,
+                message: message,
+              ),
+              if (message.content.isNotEmpty)
+                BotMsg(content: message.content, streaming: message.streaming),
+            ] else
+              BotMsg(content: message.content, streaming: message.streaming),
+          ],
+        ],
       ],
     );
   }

@@ -70,4 +70,23 @@ class ModelFitResult {
     required this.speedTokensPerSec,
     required this.score,
   });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ModelFitResult &&
+        other.vramEstimateMb == vramEstimateMb &&
+        other.fit == fit &&
+        other.mode == mode &&
+        other.speedTokensPerSec == speedTokensPerSec &&
+        other.score == score;
+  }
+
+  @override
+  int get hashCode => Object.hash(vramEstimateMb, fit, mode, speedTokensPerSec, score);
+
+  @override
+  String toString() =>
+      'ModelFitResult(vramEstimateMb: $vramEstimateMb, fit: $fit, mode: $mode, '
+      'speedTokensPerSec: $speedTokensPerSec, score: $score)';
 }

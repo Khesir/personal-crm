@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../domain/model/huggingface_model_result.dart';
+import '../../domain/model/model_name_parser.dart';
 
 /// Datasource for the public, unauthenticated Hugging Face Hub API
 /// (`GET /api/models`), used to discover GGUF models for local inference.
@@ -22,12 +23,6 @@ import '../../domain/model/huggingface_model_result.dart';
 ///   if present and an int, else left null.
 /// - Models with no recognized-quant `.gguf` siblings are skipped entirely.
 class HuggingFaceDatasource {
-  static final _paramsRegex = RegExp(r'(\d+(?:\.\d+)?)[Bb]');
-  static final _quantRegex = RegExp(
-    r'(Q\d_K_[SML]|Q\d_K|Q\d_\d|BF16|F16|F32)',
-    caseSensitive: false,
-  );
-
   final Dio _dio;
 
   HuggingFaceDatasource(this._dio);
@@ -52,7 +47,7 @@ class HuggingFaceDatasource {
       final repoId = model['id'] as String?;
       if (repoId == null) continue;
 
-      final paramsBillions = _parseParamsBillions(repoId);
+      final paramsBillions = ModelNameParser.parseParamsBillions(repoId);
       if (paramsBillions == null) continue;
 
       final siblings = (model['siblings'] as List<dynamic>? ?? [])
@@ -65,7 +60,7 @@ class HuggingFaceDatasource {
         final filename = sibling['rfilename'] as String?;
         if (filename == null || !filename.toLowerCase().endsWith('.gguf')) continue;
 
-        final quant = _parseQuant(filename);
+        final quant = ModelNameParser.parseQuant(filename);
         if (quant == null) continue;
 
         final size = sibling['size'];
@@ -83,18 +78,6 @@ class HuggingFaceDatasource {
     }
 
     return results;
-  }
-
-  double? _parseParamsBillions(String repoId) {
-    final matches = _paramsRegex.allMatches(repoId).toList();
-    if (matches.isEmpty) return null;
-    return double.tryParse(matches.last.group(1)!);
-  }
-
-  String? _parseQuant(String filename) {
-    final match = _quantRegex.firstMatch(filename);
-    if (match == null) return null;
-    return match.group(1)!.toUpperCase();
   }
 
   int? _parseContextLength(Map<String, dynamic> model) {

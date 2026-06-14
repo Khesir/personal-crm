@@ -1,19 +1,31 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crm/features/brain/api.dart';
+import 'package:crm/features/settings/data/datasource/projects_local_datasource.dart';
 import 'package:crm/features/settings/data/datasource/service_cards_local_datasource.dart';
+import 'package:crm/features/settings/data/repository/projects_repository_impl.dart';
 import 'package:crm/features/settings/data/repository/service_cards_repository_impl.dart';
 import 'package:crm/features/settings/domain/model/service_card.dart';
+import 'package:crm/features/settings/domain/model/service_cards_cache.dart';
 import 'data/datasource/anthropic_datasource.dart';
 import 'data/datasource/chat_local_datasource.dart';
 import 'data/datasource/ollama_datasource.dart';
 import 'data/datasource/openai_compatible_datasource.dart';
+import 'data/datasource/searxng_datasource.dart';
+import 'package:crm/features/settings/data/repository/io_process_runner.dart';
+import 'data/repository/agent_tool_repository_impl.dart';
 import 'data/repository/anthropic_repository_impl.dart';
 import 'data/repository/chat_conversations_repository_impl.dart';
+import 'package:crm/features/settings/data/repository/hardware_info_repository_impl.dart';
+import 'data/repository/command_execution_repository_impl.dart';
+import 'data/repository/fetch_page_repository_impl.dart';
 import 'data/repository/ollama_repository_impl.dart';
 import 'data/repository/openai_compatible_repository_impl.dart';
+import 'data/repository/web_search_repository_impl.dart';
+import 'data/datasource/page_fetch_datasource.dart';
 import 'domain/controller/chat_controller.dart';
 import 'domain/repository/chat_model_repository.dart';
+import 'domain/repository/web_search_repository.dart';
 
 ChatModelRepository _repositoryFor(ServiceCard card) {
   final baseDio = Dio(BaseOptions(
@@ -50,6 +62,11 @@ ChatModelRepository _repositoryFor(ServiceCard card) {
       )))),
     _ => throw ArgumentError('${card.type} is not a chat-capable type'),
   };
+}
+
+WebSearchRepository? _webSearchRepositoryFor(String baseUrl) {
+  if (baseUrl.isEmpty) return null;
+  return WebSearchRepositoryImpl(SearxngDatasource(Dio(), baseUrl: baseUrl));
 }
 
 ChatController? _chatController;
@@ -100,8 +117,28 @@ Future<ChatController> _createChatController() async {
   final serviceCardsRepository = ServiceCardsRepositoryImpl(ServiceCardsLocalDatasource(prefs));
   final conversationsRepository = ChatConversationsRepositoryImpl(ChatLocalDatasource(prefs));
 
+  final projectsRepository = ProjectsRepositoryImpl(ProjectsLocalDatasource(prefs));
+  final agentToolRepository = AgentToolRepositoryImpl();
+  final webSearchRepository = _webSearchRepositoryFor(
+    ServiceCardsCache.instance.field(ServiceType.searxng, 'baseUrl'),
+  );
+  final commandExecutionRepository = CommandExecutionRepositoryImpl(IoProcessRunner());
+  final hardwareInfoRepository = HardwareInfoRepositoryImpl(IoProcessRunner());
+  final fetchPageRepository = FetchPageRepositoryImpl(PageFetchDatasource(Dio()));
+
   final brainRepository = createBrainRepository();
-  final controller = ChatController(serviceCardsRepository, _repositoryFor, conversationsRepository, brainRepository);
+  final controller = ChatController(
+    serviceCardsRepository,
+    _repositoryFor,
+    conversationsRepository,
+    brainRepository,
+    projectsRepository: projectsRepository,
+    agentToolRepository: agentToolRepository,
+    webSearchRepository: webSearchRepository,
+    commandExecutionRepository: commandExecutionRepository,
+    hardwareInfoRepository: hardwareInfoRepository,
+    fetchPageRepository: fetchPageRepository,
+  );
   await controller.load();
   _chatController = controller;
   return controller;

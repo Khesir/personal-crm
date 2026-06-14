@@ -1,4 +1,6 @@
 import '../model/chat_message.dart';
+import '../model/chat_stream_event.dart';
+import '../model/tool_definition.dart';
 
 /// Contract satisfied by any chat-capable backend — Local LLM servers
 /// (Ollama, OpenAI-compatible custom local servers) and API LLM providers
@@ -7,9 +9,10 @@ import '../model/chat_message.dart';
 abstract class ChatModelRepository {
   Future<List<String>> listModels();
 
-  Stream<String> streamChat({
+  Stream<ChatStreamEvent> streamChat({
     required String model,
     required List<ChatMessage> messages,
+    List<ToolDefinition> tools = const [],
   });
 }
 

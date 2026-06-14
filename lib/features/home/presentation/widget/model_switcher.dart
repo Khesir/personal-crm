@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:crm/core/theme/theme.dart';
+import 'package:crm/features/settings/presentation/widget/fit_badge.dart';
 import '../../domain/model/cookbook_entry.dart';
 
 class ModelSwitcher extends StatelessWidget {
@@ -38,7 +39,16 @@ class ModelSwitcher extends StatelessWidget {
             for (final entry in entries)
               DropdownMenuItem(
                 value: entry,
-                child: Text('${entry.model} — ${entry.cardName}'),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('${entry.model} — ${entry.cardName}'),
+                    if (entry.fitResult != null) ...[
+                      const SizedBox(width: AppStyling.spaceSm),
+                      FitBadge(fit: entry.fitResult!.fit),
+                    ],
+                  ],
+                ),
               ),
           ],
           onChanged: (value) {

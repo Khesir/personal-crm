@@ -30,7 +30,8 @@ enum ServiceType {
   deepSeek,
   mistral,
   nvidia,
-  openCodeZen;
+  openCodeZen,
+  searxng;
 
   String get value => switch (this) {
         ServiceType.ollama => 'ollama',
@@ -47,6 +48,7 @@ enum ServiceType {
         ServiceType.mistral => 'mistral',
         ServiceType.nvidia => 'nvidia',
         ServiceType.openCodeZen => 'open_code_zen',
+        ServiceType.searxng => 'searxng',
       };
 
   static ServiceType fromValue(String value) => switch (value) {
@@ -63,6 +65,7 @@ enum ServiceType {
         'mistral' => ServiceType.mistral,
         'nvidia' => ServiceType.nvidia,
         'open_code_zen' => ServiceType.openCodeZen,
+        'searxng' => ServiceType.searxng,
         _ => ServiceType.ollama,
       };
 }

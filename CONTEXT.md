@@ -24,3 +24,13 @@ _Avoid_: Long-term memory, notes (see Vault)
 
 **Home chat**:
 The in-app chat surface (`lib/features/home`) — the primary AI assistant surface, intended to grow Claude-Code-like tooling (file access, running tasks) in a later effort. The brain feeds this surface.
+
+**Agent mode**:
+A Home chat mode where the assistant can call tools to read/edit files and run commands, scoped to a working project, instead of exchanging plain text only.
+
+**Working project**:
+The `Project` (see Settings > Projects, `localPath`) selected for an agent mode session — the assistant has full read/write file access here, similar to Claude Code's working directory.
+_Avoid_: Active project, sandbox
+
+**Reference project**:
+Any other registered `Project` the assistant can read files from during an agent mode session, for cross-project context (e.g. consulting the backend repo while working in the crm repo). Read-only — writes are never allowed outside the working project.
