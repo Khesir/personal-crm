@@ -6,9 +6,18 @@ import '../repository/issues_repository.dart';
 class IssuesController extends StreamState<AsyncState<List<Issue>>> {
   final IssuesRepository repository;
 
+  String? _localPath;
+
   IssuesController(this.repository) : super(const AsyncLoading());
 
-  Future<void> load(String localPath) =>
+  String? get localPath => _localPath;
+
+  Future<void> load(String localPath) {
+    _localPath = localPath;
+    return execute(() => repository.getIssues(localPath));
+  }
+
+  Future<void> refresh(String localPath) =>
       execute(() => repository.getIssues(localPath));
 
   Future<void> loadArchive(String localPath, String archiveName) =>
@@ -34,6 +43,13 @@ class IssuesController extends StreamState<AsyncState<List<Issue>>> {
   Future<void> moveIssue(Issue issue, IssueStatus newStatus) async {
     final moved = await repository.moveIssue(issue, newStatus);
     _replaceIssue(moved);
+  }
+
+  Future<void> deleteIssue(Issue issue) async {
+    await repository.deleteIssue(issue);
+    final current = data;
+    if (current == null) return;
+    emit(AsyncData(current.where((i) => i.id != issue.id).toList()));
   }
 
   Future<void> createIssue(String localPath, Issue issue) async {

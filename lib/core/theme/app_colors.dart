@@ -46,4 +46,12 @@ class AppColors {
   static const warning = Color(0xFFF59E0B);
   static const error = Color(0xFFEF4444);
   static const info = Color(0xFF3B82F6);
+
+  // Terminal palette
+  static const termBackground = Color(0xFF0C0C0E);
+  static const termForeground = Color(0xFFCDD6F4);
+  static const termRed = Color(0xFFF38BA8);
+  static const termGreen = Color(0xFFA6E3A1);
+  static const termYellow = Color(0xFFF9E2AF);
+  static const termCyan = Color(0xFF89DCEB);
 }

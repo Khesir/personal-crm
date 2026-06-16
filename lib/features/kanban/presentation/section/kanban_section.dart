@@ -41,6 +41,23 @@ class _KanbanSectionState extends State<KanbanSection> {
     _scrollController.jumpTo(target);
   }
 
+  void _createIssue(IssueStatus status, String title) {
+    final localPath = widget.controller.localPath;
+    if (localPath == null) return;
+    final id = 'issue-${DateTime.now().millisecondsSinceEpoch}';
+    final issue = Issue(
+      id: id,
+      title: title,
+      feature: 'general',
+      status: status,
+      createdAt: DateTime.now(),
+      tags: const [],
+      body: '',
+      filePath: '',
+    );
+    widget.controller.createIssue(localPath, issue);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -66,6 +83,11 @@ class _KanbanSectionState extends State<KanbanSection> {
                           status: status,
                           issues: issues.where((issue) => issue.status == status).toList(),
                           onIssueTap: widget.onIssueTap,
+                          onMoveIssue: widget.readOnly
+                              ? null
+                              : (issue, newStatus) =>
+                                  widget.controller.moveIssue(issue, newStatus),
+                          onCreateIssue: widget.readOnly ? null : _createIssue,
                         ),
                       ),
                   ],

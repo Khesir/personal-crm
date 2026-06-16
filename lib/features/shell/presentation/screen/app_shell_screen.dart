@@ -12,6 +12,7 @@ import '../../domain/controller/shell_controller.dart';
 import '../state/shell_state.dart';
 import '../widget/app_rail.dart';
 import '../widget/app_sidebar.dart';
+import '../widget/project_content_dock_overlay.dart';
 
 typedef RunSkillCallback =
     void Function({
@@ -323,7 +324,9 @@ class _ProjectsContent extends StatefulWidget {
 
 class _ProjectsContentState extends State<_ProjectsContent> {
   late IssuesController _issuesController;
+  late IssuesWatcherController _watcherController;
   late IssuesRepository _issuesRepository;
+  late DockController _dockController;
   String? _loadedLocalPath;
   String? _selectedIssueId;
   AnnouncementsController? _announcementsController;
@@ -333,12 +336,15 @@ class _ProjectsContentState extends State<_ProjectsContent> {
 
   String? _selectedArchive;
   IssuesController? _archiveController;
+  TerminalSessionController? _terminalSessionController;
 
   @override
   void initState() {
     super.initState();
     _issuesController = createIssuesController();
+    _watcherController = createIssuesWatcherController(_issuesController);
     _issuesRepository = createIssuesRepository();
+    _dockController = createDockController();
     _loadIssuesIfNeeded();
     _ensureAnnouncementsController();
     _ensureBugReportsController();
@@ -355,9 +361,12 @@ class _ProjectsContentState extends State<_ProjectsContent> {
   @override
   void dispose() {
     _issuesController.dispose();
+    _watcherController.dispose();
     _announcementsController?.dispose();
     _bugReportsController?.dispose();
     _archiveController?.dispose();
+    _dockController.dispose();
+    _terminalSessionController?.dispose();
     super.dispose();
   }
 
@@ -367,7 +376,14 @@ class _ProjectsContentState extends State<_ProjectsContent> {
       _loadedLocalPath = localPath;
       _issuesController.load(localPath);
       _resetArchiveSelection();
+      _ensureTerminalSessionController(localPath);
+      _watcherController.start(localPath);
     }
+  }
+
+  void _ensureTerminalSessionController(String localPath) {
+    _terminalSessionController?.dispose();
+    _terminalSessionController = createTerminalSessionController(localPath);
   }
 
   void _resetArchiveSelection() {
@@ -516,6 +532,14 @@ class _ProjectsContentState extends State<_ProjectsContent> {
                         ] else ...[
                           Row(
                             children: [
+                              StreamStateBuilder<IssuesWatcherStateData>(
+                                state: _watcherController,
+                                builder: (context, data) => WatchPill(
+                                  watching: data.watching,
+                                  lastSyncedAt: data.lastSyncedAt,
+                                ),
+                              ),
+                              const SizedBox(width: AppStyling.spaceMd),
                               _RescanButton(onPressed: _rescan),
                               const SizedBox(width: AppStyling.spaceMd),
                               _RunSkillButton(
@@ -538,18 +562,24 @@ class _ProjectsContentState extends State<_ProjectsContent> {
                       style: AppStyling.bodySm,
                     ),
                   )
-                : _ProjectSectionContent(
-                    section: shellState.selectedProjectSection,
-                    issuesController: _issuesController,
-                    kanbanController: _archiveController ?? _issuesController,
-                    kanbanReadOnly: _selectedArchive != null,
-                    selectedIssueId: _selectedIssueId,
-                    onIssueTap: _openIssue,
-                    onCloseIssue: _closeIssue,
-                    announcementsController: _announcementsController,
-                    bugReportsController: _bugReportsController,
-                    project: project,
-                    onRunSkill: widget.onRunSkill,
+                : ProjectContentDockOverlay(
+                    dockController: _dockController,
+                    projectName: project.name,
+                    showDock: _selectedArchive == null,
+                    terminalSessionController: _terminalSessionController,
+                    content: _ProjectSectionContent(
+                      section: shellState.selectedProjectSection,
+                      issuesController: _issuesController,
+                      kanbanController: _archiveController ?? _issuesController,
+                      kanbanReadOnly: _selectedArchive != null,
+                      selectedIssueId: _selectedIssueId,
+                      onIssueTap: _openIssue,
+                      onCloseIssue: _closeIssue,
+                      announcementsController: _announcementsController,
+                      bugReportsController: _bugReportsController,
+                      project: project,
+                      onRunSkill: widget.onRunSkill,
+                    ),
                   ),
           ),
         ],
@@ -670,6 +700,7 @@ class _KanbanOrDetail extends StatelessWidget {
           controller: issuesController,
           issue: issue,
           onBack: onCloseIssue,
+          onDeleted: onCloseIssue,
           onRunSkill: () => onRunSkill(
             skill: AgentSkill.workIssue,
             project: project,

@@ -85,12 +85,12 @@ class IssuesRepositoryImpl implements IssuesRepository {
 
   @override
   Future<Issue> createIssue(String localPath, Issue issue) async {
-    final backlogDir = Directory(
-      p.join(localPath, 'issues', _statusFolders[IssueStatus.backlog]!),
+    final targetDir = Directory(
+      p.join(localPath, 'issues', _statusFolders[issue.status]!),
     );
-    if (!await backlogDir.exists()) await backlogDir.create(recursive: true);
+    if (!await targetDir.exists()) await targetDir.create(recursive: true);
 
-    final filePath = p.join(backlogDir.path, '${issue.id}.md');
+    final filePath = p.join(targetDir.path, '${issue.id}.md');
     final contents = writer.createFileContents(issue);
     await File(filePath).writeAsString(contents);
 
@@ -98,7 +98,7 @@ class IssuesRepositoryImpl implements IssuesRepository {
       id: issue.id,
       title: issue.title,
       feature: issue.feature,
-      status: IssueStatus.backlog,
+      status: issue.status,
       createdAt: issue.createdAt,
       tags: issue.tags,
       body: issue.body,
@@ -135,6 +135,11 @@ class IssuesRepositoryImpl implements IssuesRepository {
       body: body ?? issue.body,
       filePath: issue.filePath,
     );
+  }
+
+  @override
+  Future<void> deleteIssue(Issue issue) async {
+    await File(issue.filePath).delete();
   }
 
   @override

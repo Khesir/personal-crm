@@ -3,6 +3,7 @@ import 'package:crm/core/theme/theme.dart';
 import '../../domain/controller/issues_controller.dart';
 import '../../domain/helper/acceptance_criteria_parser.dart';
 import '../../domain/model/issue.dart';
+import '../dialogs/issue_delete_dialog.dart';
 import '../dialogs/issue_edit_dialog.dart';
 import '../widget/acceptance_criteria_list.dart';
 import '../widget/issue_metadata_panel.dart';
@@ -15,6 +16,7 @@ class IssueDetailSection extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onRunSkill;
   final bool readOnly;
+  final VoidCallback onDeleted;
 
   const IssueDetailSection({
     super.key,
@@ -22,6 +24,7 @@ class IssueDetailSection extends StatelessWidget {
     required this.issue,
     required this.onBack,
     required this.onRunSkill,
+    required this.onDeleted,
     this.readOnly = false,
   });
 
@@ -40,6 +43,18 @@ class IssueDetailSection extends StatelessWidget {
     );
   }
 
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => IssueDeleteDialog(
+        onConfirm: () async {
+          await controller.deleteIssue(issue);
+          onDeleted();
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final criteria = parseAcceptanceCriteria(issue.body);
@@ -55,6 +70,7 @@ class IssueDetailSection extends StatelessWidget {
             onBack: onBack,
             onMove: _move,
             onEdit: () => _edit(context),
+            onDelete: () => _confirmDelete(context),
             onRunSkill: onRunSkill,
             readOnly: readOnly,
           ),
@@ -118,6 +134,7 @@ class _DetailHeader extends StatelessWidget {
   final VoidCallback onBack;
   final ValueChanged<IssueStatus> onMove;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
   final VoidCallback onRunSkill;
   final bool readOnly;
 
@@ -126,6 +143,7 @@ class _DetailHeader extends StatelessWidget {
     required this.onBack,
     required this.onMove,
     required this.onEdit,
+    required this.onDelete,
     required this.onRunSkill,
     this.readOnly = false,
   });
@@ -160,6 +178,8 @@ class _DetailHeader extends StatelessWidget {
           _ActionButton(label: 'Run skill', icon: Icons.smart_toy_outlined, onTap: onRunSkill),
           const SizedBox(width: AppStyling.spaceMd),
           _ActionButton(label: 'Edit', icon: Icons.edit_outlined, onTap: onEdit),
+          const SizedBox(width: AppStyling.spaceMd),
+          _ActionButton(label: 'Delete', icon: Icons.delete_outline, onTap: onDelete, destructive: true),
         ],
       ],
     );
@@ -170,11 +190,18 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
+  final bool destructive;
 
-  const _ActionButton({required this.label, required this.icon, required this.onTap});
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.destructive = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final color = destructive ? AppColors.error : AppColors.textSecondary;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -185,14 +212,14 @@ class _ActionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceRaised,
           borderRadius: BorderRadius.circular(AppStyling.radiusMd),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: destructive ? AppColors.error.withValues(alpha: 0.4) : AppColors.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: AppColors.textSecondary),
+            Icon(icon, size: 16, color: color),
             const SizedBox(width: AppStyling.spaceXs),
-            Text(label, style: AppStyling.bodySm),
+            Text(label, style: AppStyling.bodySm.copyWith(color: color)),
           ],
         ),
       ),

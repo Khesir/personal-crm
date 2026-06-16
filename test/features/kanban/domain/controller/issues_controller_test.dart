@@ -126,6 +126,14 @@ class FakeIssuesRepository implements IssuesRepository {
     ];
     return moved;
   }
+
+  @override
+  Future<void> deleteIssue(Issue issue) async {
+    issues = [
+      for (final existing in issues)
+        if (existing.id != issue.id) existing,
+    ];
+  }
 }
 
 void main() {

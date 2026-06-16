@@ -33,4 +33,7 @@ abstract class IssuesRepository {
   /// Moves the issue's file to the folder for [newStatus] and updates its
   /// `status:` frontmatter field.
   Future<Issue> moveIssue(Issue issue, IssueStatus newStatus);
+
+  /// Permanently deletes the issue's file from disk.
+  Future<void> deleteIssue(Issue issue);
 }

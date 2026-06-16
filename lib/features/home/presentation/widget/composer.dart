@@ -4,6 +4,7 @@ import 'package:crm/core/theme/theme.dart';
 class Composer extends StatefulWidget {
   final String? activeModel;
   final bool isStreaming;
+  final bool showModelBadge;
   final ValueChanged<String> onSend;
 
   const Composer({
@@ -11,6 +12,7 @@ class Composer extends StatefulWidget {
     required this.activeModel,
     required this.isStreaming,
     required this.onSend,
+    this.showModelBadge = true,
   });
 
   @override
@@ -60,7 +62,7 @@ class _ComposerState extends State<Composer> {
           const SizedBox(height: AppStyling.spaceSm),
           Row(
             children: [
-              if (widget.activeModel != null)
+              if (widget.activeModel != null && widget.showModelBadge)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppStyling.spaceSm,
