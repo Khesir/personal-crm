@@ -3,8 +3,8 @@
 /// `"qwen2.5-coder:7b-instruct-q4_K_M"`.
 ///
 /// Shared between [HuggingFaceDatasource] (parsing Hugging Face repo ids and
-/// filenames) and [ChatController] (parsing local model names/tags for
-/// [ModelFitResult] computation) — do not duplicate these regexes.
+/// filenames) and local model name/tag parsing for [ModelFitResult]
+/// computation — do not duplicate these regexes.
 abstract final class ModelNameParser {
   static final _paramsRegex = RegExp(r'(\d+(?:\.\d+)?)[Bb]');
   static final _quantRegex = RegExp(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:crm/core/di/service_locator.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
+import 'package:crm/features/agent/api.dart';
 import 'package:crm/features/home/api.dart';
 import 'package:crm/features/settings/api.dart';
 import '../../domain/controller/shell_controller.dart';
@@ -22,7 +24,7 @@ class AppSidebar extends StatelessWidget {
           width: AppStyling.sidebarWidth,
           color: AppColors.surface,
           child: switch (shellState.selectedTab) {
-            AppTab.home => const _HomeSidebar(),
+            AppTab.home => HomeSidebarSection(controller: locator.get<AgentController>()),
             AppTab.projects => _ProjectsSidebar(
                 selectedProjectId: shellState.selectedProjectId,
                 onSelect: controller.selectProject,
@@ -64,24 +66,6 @@ class _EmptyHint extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppStyling.spaceLg),
       child: Text(text, style: AppStyling.bodySm),
-    );
-  }
-}
-
-class _HomeSidebar extends StatelessWidget {
-  const _HomeSidebar();
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<ChatController>(
-      future: createChatController(),
-      builder: (context, snapshot) {
-        final controller = snapshot.data;
-        if (controller == null) {
-          return const SizedBox.shrink();
-        }
-        return HomeSidebarSection(controller: controller);
-      },
     );
   }
 }

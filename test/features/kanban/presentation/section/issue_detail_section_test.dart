@@ -74,7 +74,7 @@ void main() {
         controller: controller,
         issue: _issue,
         onBack: () {},
-        onRunSkill: () {}, onDeleted: () {},
+        onDeleted: () {},
       )));
 
       await tester.tap(find.text('Delete'));
@@ -99,7 +99,7 @@ void main() {
         controller: controller,
         issue: _issue,
         onBack: () => backCalled = true,
-        onRunSkill: () {}, onDeleted: () {},
+        onDeleted: () {},
       )));
 
       await tester.tap(find.text('Delete'));
@@ -128,7 +128,7 @@ void main() {
         controller: controller,
         issue: _issue,
         onBack: () => backCalled = true,
-        onRunSkill: () {}, onDeleted: () {},
+        onDeleted: () {},
       )));
 
       await tester.tap(find.text('Delete'));
@@ -156,7 +156,7 @@ void main() {
         controller: controller,
         issue: _issue,
         onBack: () {},
-        onRunSkill: () {}, onDeleted: () {},
+        onDeleted: () {},
         readOnly: true,
       )));
 

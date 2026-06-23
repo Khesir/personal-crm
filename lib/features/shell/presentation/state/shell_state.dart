@@ -26,12 +26,14 @@ enum SettingsSection {
   projects,
   services,
   brain,
+  agent,
   about;
 
   String get label => switch (this) {
         SettingsSection.projects => 'Projects',
         SettingsSection.services => 'Services',
         SettingsSection.brain => 'Brain',
+        SettingsSection.agent => 'Agent',
         SettingsSection.about => 'About',
       };
 }

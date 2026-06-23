@@ -13,8 +13,7 @@ class OllamaRepositoryImpl implements ChatModelRepository {
   @override
   Future<List<String>> listModels() => datasource.listModels();
 
-  /// Returns whether [model] actually supports tool-calling, used by
-  /// `ChatController.refresh()` to populate `CookbookEntry.supportsTools`.
+  /// Returns whether [model] actually supports tool-calling.
   /// Not part of [ChatModelRepository] — Ollama-specific.
   ///
   /// First checks whether [model] reports the `"tools"` capability via

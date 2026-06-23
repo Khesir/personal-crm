@@ -14,7 +14,6 @@ class IssueDetailSection extends StatelessWidget {
   final IssuesController controller;
   final Issue issue;
   final VoidCallback onBack;
-  final VoidCallback onRunSkill;
   final bool readOnly;
   final VoidCallback onDeleted;
 
@@ -23,7 +22,6 @@ class IssueDetailSection extends StatelessWidget {
     required this.controller,
     required this.issue,
     required this.onBack,
-    required this.onRunSkill,
     required this.onDeleted,
     this.readOnly = false,
   });
@@ -71,7 +69,6 @@ class IssueDetailSection extends StatelessWidget {
             onMove: _move,
             onEdit: () => _edit(context),
             onDelete: () => _confirmDelete(context),
-            onRunSkill: onRunSkill,
             readOnly: readOnly,
           ),
           const SizedBox(height: AppStyling.spaceLg),
@@ -135,7 +132,6 @@ class _DetailHeader extends StatelessWidget {
   final ValueChanged<IssueStatus> onMove;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-  final VoidCallback onRunSkill;
   final bool readOnly;
 
   const _DetailHeader({
@@ -144,7 +140,6 @@ class _DetailHeader extends StatelessWidget {
     required this.onMove,
     required this.onEdit,
     required this.onDelete,
-    required this.onRunSkill,
     this.readOnly = false,
   });
 
@@ -174,8 +169,6 @@ class _DetailHeader extends StatelessWidget {
         ),
         if (!readOnly) ...[
           IssueStatusPicker(status: issue.status, onChanged: onMove),
-          const SizedBox(width: AppStyling.spaceMd),
-          _ActionButton(label: 'Run skill', icon: Icons.smart_toy_outlined, onTap: onRunSkill),
           const SizedBox(width: AppStyling.spaceMd),
           _ActionButton(label: 'Edit', icon: Icons.edit_outlined, onTap: onEdit),
           const SizedBox(width: AppStyling.spaceMd),

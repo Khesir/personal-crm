@@ -1,48 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:crm/core/state/state.dart';
+import 'package:crm/core/state/stream_builder_widget.dart';
 import 'package:crm/core/theme/theme.dart';
-import '../../domain/controller/chat_controller.dart';
-import '../../domain/model/agent_loop_constants.dart';
-import '../helpers/agent_mode_flow.dart';
+import 'package:crm/features/agent/api.dart';
 import '../helpers/relative_time.dart';
-import '../state/chat_state.dart';
 
-class HomeSidebarSection extends StatelessWidget {
-  final ChatController controller;
+class HomeSidebarSection extends StatefulWidget {
+  final AgentController controller;
 
   const HomeSidebarSection({super.key, required this.controller});
 
   @override
+  State<HomeSidebarSection> createState() => _HomeSidebarSectionState();
+}
+
+class _HomeSidebarSectionState extends State<HomeSidebarSection> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.loadSessions();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return StreamStateBuilder<ChatStateData>(
-      state: controller,
+    return StreamStateBuilder<AgentStateData>(
+      state: widget.controller,
       builder: (context, state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.all(AppStyling.spaceMd),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => startNewChat(context, controller),
-                  icon: const Icon(Icons.add_rounded, size: 16),
-                  label: const Text('New chat'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: const BorderSide(color: AppColors.border),
-                    padding: const EdgeInsets.symmetric(vertical: AppStyling.spaceSm),
-                  ),
-                ),
+              padding: const EdgeInsets.fromLTRB(
+                AppStyling.spaceLg,
+                AppStyling.spaceLg,
+                AppStyling.spaceLg,
+                AppStyling.spaceSm,
               ),
+              child: _NewChatButton(onTap: widget.controller.newChat),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppStyling.spaceLg, AppStyling.spaceLg, AppStyling.spaceLg, AppStyling.spaceSm,
+                AppStyling.spaceLg,
+                AppStyling.spaceSm,
+                AppStyling.spaceLg,
+                AppStyling.spaceSm,
               ),
-              child: Text('CONVERSATIONS', style: AppStyling.label),
+              child: Text('RECENT', style: AppStyling.label),
             ),
-            if (state.conversations.isEmpty)
+            if (state.sessions.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppStyling.spaceLg),
                 child: Text('No conversations yet.', style: AppStyling.bodySm),
@@ -51,14 +55,13 @@ class HomeSidebarSection extends StatelessWidget {
               Expanded(
                 child: ListView(
                   children: [
-                    for (final conversation in state.conversations)
-                      _ConversationItem(
-                        title: conversation.title,
-                        timestamp: formatRelativeTime(conversation.updatedAt),
-                        selected: conversation.id == state.activeConversationId,
-                        onTap: () => controller.selectConversation(conversation.id),
-                        onBranchIntoAgentMode: () =>
-                            branchIntoAgentMode(context, controller, conversation.id),
+                    for (final session in state.sessions)
+                      _SessionItem(
+                        title: session.title,
+                        timestamp: formatRelativeTime(session.updatedAt),
+                        selected: session.id == state.sessionId,
+                        onTap: () => widget.controller.resumeSession(session.id),
+                        onDelete: () => widget.controller.deleteSession(session.id),
                       ),
                   ],
                 ),
@@ -70,26 +73,58 @@ class HomeSidebarSection extends StatelessWidget {
   }
 }
 
-class _ConversationItem extends StatefulWidget {
+class _NewChatButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _NewChatButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: AppStyling.spaceSm),
+        decoration: BoxDecoration(
+          color: AppColors.accent,
+          borderRadius: BorderRadius.circular(AppStyling.radiusMd),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.add, size: 16, color: Colors.black),
+            const SizedBox(width: AppStyling.spaceXs),
+            Text(
+              'New chat',
+              style: AppStyling.bodySm.copyWith(color: Colors.black, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SessionItem extends StatefulWidget {
   final String title;
   final String timestamp;
   final bool selected;
   final VoidCallback onTap;
-  final VoidCallback onBranchIntoAgentMode;
+  final VoidCallback onDelete;
 
-  const _ConversationItem({
+  const _SessionItem({
     required this.title,
     required this.timestamp,
     required this.selected,
     required this.onTap,
-    required this.onBranchIntoAgentMode,
+    required this.onDelete,
   });
 
   @override
-  State<_ConversationItem> createState() => _ConversationItemState();
+  State<_SessionItem> createState() => _SessionItemState();
 }
 
-class _ConversationItemState extends State<_ConversationItem> {
+class _SessionItemState extends State<_SessionItem> {
   bool _hovered = false;
 
   @override
@@ -101,10 +136,7 @@ class _ConversationItemState extends State<_ConversationItem> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          margin: const EdgeInsets.symmetric(
-            horizontal: AppStyling.spaceSm,
-            vertical: 2,
-          ),
+          margin: const EdgeInsets.symmetric(horizontal: AppStyling.spaceSm, vertical: 2),
           padding: const EdgeInsets.symmetric(
             horizontal: AppStyling.spaceMd,
             vertical: AppStyling.spaceSm,
@@ -119,6 +151,18 @@ class _ConversationItemState extends State<_ConversationItem> {
           ),
           child: Row(
             children: [
+              if (widget.selected)
+                Container(
+                  width: 3,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                )
+              else
+                const SizedBox(width: 3),
+              const SizedBox(width: AppStyling.spaceSm),
               Expanded(
                 child: Text(
                   widget.title,
@@ -134,48 +178,20 @@ class _ConversationItemState extends State<_ConversationItem> {
                   ),
                 ),
               ),
-              const SizedBox(width: AppStyling.spaceSm),
-              if (_hovered && kAgentModeEnabled)
-                _ConversationMenuButton(onBranchIntoAgentMode: widget.onBranchIntoAgentMode)
+              if (_hovered)
+                GestureDetector(
+                  onTap: widget.onDelete,
+                  child: const Icon(Icons.delete_outline, size: 14, color: AppColors.textTertiary),
+                )
               else
-                Text(widget.timestamp, style: AppStyling.label),
+                Text(
+                  widget.timestamp,
+                  style: AppStyling.bodySm.copyWith(color: AppColors.textTertiary),
+                ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-enum _ConversationMenuAction { branchIntoAgentMode }
-
-class _ConversationMenuButton extends StatelessWidget {
-  final VoidCallback onBranchIntoAgentMode;
-
-  const _ConversationMenuButton({required this.onBranchIntoAgentMode});
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<_ConversationMenuAction>(
-      icon: const Icon(Icons.more_horiz, size: 16, color: AppColors.textSecondary),
-      padding: EdgeInsets.zero,
-      color: AppColors.surfaceElevated,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppStyling.radiusMd),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      onSelected: (action) {
-        switch (action) {
-          case _ConversationMenuAction.branchIntoAgentMode:
-            onBranchIntoAgentMode();
-        }
-      },
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: _ConversationMenuAction.branchIntoAgentMode,
-          child: Text('Branch into agent mode', style: AppStyling.bodySm),
-        ),
-      ],
     );
   }
 }

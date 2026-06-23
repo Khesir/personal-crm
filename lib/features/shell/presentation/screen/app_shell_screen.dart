@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:crm/core/di/service_locator.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
 import 'package:crm/core/ui/desktop_title_bar.dart';
-import 'package:crm/features/agent_run/api.dart';
+import 'package:crm/features/agent/api.dart';
 import 'package:crm/features/home/api.dart';
 import 'package:crm/features/kanban/api.dart';
 import 'package:crm/features/projects/api.dart';
@@ -14,13 +15,6 @@ import '../widget/app_rail.dart';
 import '../widget/app_sidebar.dart';
 import '../widget/project_content_dock_overlay.dart';
 
-typedef RunSkillCallback =
-    void Function({
-      required AgentSkill skill,
-      required Project project,
-      Map<String, dynamic>? context,
-    });
-
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
 
@@ -30,10 +24,6 @@ class AppShellScreen extends StatefulWidget {
 
 class _AppShellScreenState extends State<AppShellScreen> {
   late final ShellController _controller;
-
-  AgentRunController? _activeAgentRun;
-  Project? _activeAgentRunProject;
-  bool _showAgentRunOverlay = false;
 
   @override
   void initState() {
@@ -47,106 +37,38 @@ class _AppShellScreenState extends State<AppShellScreen> {
     super.dispose();
   }
 
-  void _onRunSkill({
-    required AgentSkill skill,
-    required Project project,
-    Map<String, dynamic>? context,
-  }) {
-    final runController = createAgentRunController();
-    setState(() {
-      _activeAgentRun = runController;
-      _activeAgentRunProject = project;
-      _showAgentRunOverlay = true;
-    });
-    runController.start(
-      skill: skill,
-      repoPath: project.localPath,
-      projectName: project.name,
-      context: context,
-    );
-  }
-
-  void _onRunInBackground() {
-    final runController = _activeAgentRun;
-    if (runController == null) return;
-    runController.background();
-    registerActiveAgentRunController(runController);
-    setState(() => _showAgentRunOverlay = false);
-  }
-
-  void _onReopenAgentRun() {
-    _activeAgentRun?.foreground();
-    setState(() => _showAgentRunOverlay = true);
-  }
-
-  void _onViewBoard() {
-    final runController = _activeAgentRun;
-    final project = _activeAgentRunProject;
-    clearActiveAgentRunController();
-    runController?.dispose();
-    setState(() {
-      _activeAgentRun = null;
-      _activeAgentRunProject = null;
-      _showAgentRunOverlay = false;
-    });
-    if (project != null) {
-      _controller.selectTab(AppTab.projects);
-      _controller.selectProject(project.id);
-      _controller.selectProjectSection(ProjectSection.kanban);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final activeRun = _activeAgentRun;
     return DragToResizeArea(
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: Stack(
+        body: Column(
           children: [
-            Column(
-              children: [
-                const DesktopTitleBar(),
-                Container(height: 1, color: AppColors.border),
-                Expanded(
-                  child: Row(
-                    children: [
-                      AppRail(controller: _controller),
-                      Container(width: 1, color: AppColors.border),
-                      AppSidebar(controller: _controller),
-                      Container(width: 1, color: AppColors.border),
-                      Expanded(
-                        child: StreamBuilder<ShellStateData>(
-                          stream: _controller.stream,
-                          initialData: _controller.state,
-                          builder: (context, snapshot) {
-                            final shellState = snapshot.data!;
-                            return _ContentArea(
-                              shellState: shellState,
-                              controller: _controller,
-                              onRunSkill: _onRunSkill,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+            const DesktopTitleBar(),
+            Container(height: 1, color: AppColors.border),
+            Expanded(
+              child: Row(
+                children: [
+                  AppRail(controller: _controller),
+                  Container(width: 1, color: AppColors.border),
+                  AppSidebar(controller: _controller),
+                  Container(width: 1, color: AppColors.border),
+                  Expanded(
+                    child: StreamBuilder<ShellStateData>(
+                      stream: _controller.stream,
+                      initialData: _controller.state,
+                      builder: (context, snapshot) {
+                        final shellState = snapshot.data!;
+                        return _ContentArea(
+                          shellState: shellState,
+                          controller: _controller,
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            if (activeRun != null && _showAgentRunOverlay)
-              Positioned.fill(
-                child: AgentRunScreen(
-                  controller: activeRun,
-                  onRunInBackground: _onRunInBackground,
-                  onViewBoard: _onViewBoard,
-                ),
-              ),
-            if (activeRun != null)
-              AgentRunIndicator(
-                controller: activeRun,
-                onTap: _onReopenAgentRun,
-              ),
           ],
         ),
       ),
@@ -157,47 +79,24 @@ class _AppShellScreenState extends State<AppShellScreen> {
 class _ContentArea extends StatelessWidget {
   final ShellStateData shellState;
   final ShellController controller;
-  final RunSkillCallback onRunSkill;
 
   const _ContentArea({
     required this.shellState,
     required this.controller,
-    required this.onRunSkill,
   });
 
   @override
   Widget build(BuildContext context) {
     return switch (shellState.selectedTab) {
-      AppTab.home => const _HomePlaceholder(),
+      AppTab.home => HomeChatSection(controller: locator.get<AgentController>()),
       AppTab.projects => _ProjectsPlaceholder(
         shellState: shellState,
         controller: controller,
-        onRunSkill: onRunSkill,
       ),
       AppTab.settings => _SettingsContent(
         section: shellState.selectedSettingsSection,
       ),
     };
-  }
-}
-
-class _HomePlaceholder extends StatelessWidget {
-  const _HomePlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<ChatController>(
-      future: createChatController(),
-      builder: (context, snapshot) {
-        final controller = snapshot.data;
-        if (controller == null) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.accent),
-          );
-        }
-        return HomeChatSection(controller: controller);
-      },
-    );
   }
 }
 
@@ -214,6 +113,7 @@ class _SettingsContent extends StatelessWidget {
         SettingsSection.projects => const _SettingsProjectsContent(),
         SettingsSection.services => const _ServicesContent(),
         SettingsSection.brain => BrainSection(processRunner: createProcessRunner()),
+        SettingsSection.agent => AgentSettingsSection(controller: locator.get<AgentController>()),
         SettingsSection.about => const AboutSection(),
       },
     );
@@ -263,12 +163,10 @@ class _ServicesContent extends StatelessWidget {
 class _ProjectsPlaceholder extends StatelessWidget {
   final ShellStateData shellState;
   final ShellController controller;
-  final RunSkillCallback onRunSkill;
 
   const _ProjectsPlaceholder({
     required this.shellState,
     required this.controller,
-    required this.onRunSkill,
   });
 
   @override
@@ -296,7 +194,6 @@ class _ProjectsPlaceholder extends StatelessWidget {
               shellState: shellState,
               controller: controller,
               selectedProject: selectedProject,
-              onRunSkill: onRunSkill,
             );
           },
         );
@@ -309,13 +206,11 @@ class _ProjectsContent extends StatefulWidget {
   final ShellStateData shellState;
   final ShellController controller;
   final Project? selectedProject;
-  final RunSkillCallback onRunSkill;
 
   const _ProjectsContent({
     required this.shellState,
     required this.controller,
     required this.selectedProject,
-    required this.onRunSkill,
   });
 
   @override
@@ -444,14 +339,6 @@ class _ProjectsContentState extends State<_ProjectsContent> {
     if (localPath != null) _issuesController.load(localPath);
   }
 
-  Future<void> _runSkill(BuildContext context) async {
-    final project = widget.selectedProject;
-    if (project == null) return;
-    final skill = await SkillPickerDialog.show(context);
-    if (skill == null) return;
-    widget.onRunSkill(skill: skill, project: project);
-  }
-
   void _openIssue(Issue issue) {
     setState(() => _selectedIssueId = issue.id);
   }
@@ -541,10 +428,6 @@ class _ProjectsContentState extends State<_ProjectsContent> {
                               ),
                               const SizedBox(width: AppStyling.spaceMd),
                               _RescanButton(onPressed: _rescan),
-                              const SizedBox(width: AppStyling.spaceMd),
-                              _RunSkillButton(
-                                onPressed: () => _runSkill(context),
-                              ),
                             ],
                           ),
                         ],
@@ -578,7 +461,6 @@ class _ProjectsContentState extends State<_ProjectsContent> {
                       announcementsController: _announcementsController,
                       bugReportsController: _bugReportsController,
                       project: project,
-                      onRunSkill: widget.onRunSkill,
                     ),
                   ),
           ),
@@ -599,7 +481,6 @@ class _ProjectSectionContent extends StatelessWidget {
   final AnnouncementsController? announcementsController;
   final BugReportsController? bugReportsController;
   final Project project;
-  final RunSkillCallback onRunSkill;
 
   const _ProjectSectionContent({
     required this.section,
@@ -612,7 +493,6 @@ class _ProjectSectionContent extends StatelessWidget {
     required this.announcementsController,
     required this.bugReportsController,
     required this.project,
-    required this.onRunSkill,
   });
 
   @override
@@ -625,7 +505,6 @@ class _ProjectSectionContent extends StatelessWidget {
         onIssueTap: onIssueTap,
         onCloseIssue: onCloseIssue,
         project: project,
-        onRunSkill: onRunSkill,
       ),
       ProjectSection.bugReports =>
         bugReportsController == null
@@ -636,7 +515,6 @@ class _ProjectSectionContent extends StatelessWidget {
                 controller: bugReportsController!,
                 issuesController: issuesController,
                 project: project,
-                onRunSkill: onRunSkill,
               ),
       ProjectSection.announcements =>
         announcementsController == null
@@ -658,7 +536,6 @@ class _KanbanOrDetail extends StatelessWidget {
   final void Function(Issue issue) onIssueTap;
   final VoidCallback onCloseIssue;
   final Project project;
-  final RunSkillCallback onRunSkill;
 
   const _KanbanOrDetail({
     required this.issuesController,
@@ -667,7 +544,6 @@ class _KanbanOrDetail extends StatelessWidget {
     required this.onIssueTap,
     required this.onCloseIssue,
     required this.project,
-    required this.onRunSkill,
   });
 
   @override
@@ -701,50 +577,9 @@ class _KanbanOrDetail extends StatelessWidget {
           issue: issue,
           onBack: onCloseIssue,
           onDeleted: onCloseIssue,
-          onRunSkill: () => onRunSkill(
-            skill: AgentSkill.workIssue,
-            project: project,
-            context: {'issueId': issue!.id},
-          ),
           readOnly: readOnly,
         );
       },
-    );
-  }
-}
-
-class _RunSkillButton extends StatelessWidget {
-  final VoidCallback onPressed;
-
-  const _RunSkillButton({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppStyling.spaceMd,
-          vertical: AppStyling.spaceSm,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceRaised,
-          borderRadius: BorderRadius.circular(AppStyling.radiusMd),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.smart_toy_outlined,
-              size: 16,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(width: AppStyling.spaceXs),
-            Text('Run skill', style: AppStyling.bodySm),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -796,8 +631,6 @@ class _ArchiveDropdown extends StatefulWidget {
   State<_ArchiveDropdown> createState() => _ArchiveDropdownState();
 }
 
-// Sentinel wrapper so `showMenu<_ArchiveChoice>` can distinguish "user picked
-// Current (value: null)" from "user dismissed the menu without choosing".
 class _ArchiveChoice {
   final String? archive;
 
@@ -827,7 +660,6 @@ class _ArchiveDropdownState extends State<_ArchiveDropdown> {
       side: const BorderSide(color: AppColors.border),
     );
 
-    // Show a "Loading…" menu while we re-scan issues/archive/.
     final loadingFuture = showMenu<_ArchiveChoice>(
       context: context,
       position: position,

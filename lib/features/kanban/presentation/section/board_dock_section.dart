@@ -1,11 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:crm/core/theme/theme.dart';
-import '../../../agent_run/presentation/state/agent_run_state.dart';
 import '../state/dock_state.dart';
 import '../state/terminal_session_controller.dart';
-import '../widget/agent_pane.dart';
 import '../widget/chat_pane.dart';
 import '../widget/terminal_pane.dart';
 
@@ -13,7 +9,7 @@ const double _dockResizeHandleHeight = 6;
 const double _dockTabbarHeight = 38;
 const double _paneDividerWidth = 6;
 
-const List<DockPane> _paneOrder = [DockPane.terminal, DockPane.agent, DockPane.chat];
+const List<DockPane> _paneOrder = [DockPane.terminal, DockPane.chat];
 
 class BoardDockSection extends StatelessWidget {
   final DockController controller;
@@ -43,7 +39,7 @@ class BoardDockSection extends StatelessWidget {
               projectName: projectName,
               terminalSessionController: terminalSessionController,
             ),
-            if (state.collapsed) _DockReopenPill(controller: controller, state: state),
+            if (state.collapsed) _DockReopenPill(controller: controller),
           ],
         );
       },
@@ -168,12 +164,6 @@ class _PaneToggleGroup extends StatelessWidget {
             onTap: () => controller.togglePane(DockPane.terminal),
           ),
           _PaneToggleButton(
-            icon: Icons.smart_toy_outlined,
-            tooltip: 'Agent',
-            selected: activePanes.contains(DockPane.agent),
-            onTap: () => controller.togglePane(DockPane.agent),
-          ),
-          _PaneToggleButton(
             icon: Icons.chat_bubble_outline,
             tooltip: 'Chat',
             selected: activePanes.contains(DockPane.chat),
@@ -272,10 +262,6 @@ class _DockBody extends StatelessWidget {
           projectName: projectName,
           sessionController: terminalSessionController,
         ),
-      DockPane.agent => AgentPane(
-          agentRunController: state.agentRunController,
-          projectName: projectName,
-        ),
       DockPane.chat => const ChatPane(),
     };
   }
@@ -342,103 +328,35 @@ class _DockBody extends StatelessWidget {
   }
 }
 
-const _kPillTickInterval = Duration(seconds: 1);
-const String _kNoActiveTaskLabel = 'No active task · 0:00';
-
-class _DockReopenPill extends StatefulWidget {
+class _DockReopenPill extends StatelessWidget {
   final DockController controller;
-  final DockStateData state;
 
-  const _DockReopenPill({required this.controller, required this.state});
-
-  @override
-  State<_DockReopenPill> createState() => _DockReopenPillState();
-}
-
-class _DockReopenPillState extends State<_DockReopenPill> {
-  Timer? _tickTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _tickTimer = Timer.periodic(_kPillTickInterval, (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _tickTimer?.cancel();
-    super.dispose();
-  }
-
-  String _label(AgentRunStateData? runState) {
-    if (runState == null || runState.status != AgentRunStatus.running) {
-      return _kNoActiveTaskLabel;
-    }
-    final skill = runState.skill;
-    final startedAt = runState.startedAt;
-    final elapsed = startedAt == null ? Duration.zero : DateTime.now().difference(startedAt);
-    final minutes = elapsed.inMinutes;
-    final seconds = elapsed.inSeconds % 60;
-    final elapsedLabel = '$minutes:${seconds.toString().padLeft(2, '0')}';
-    return '${skill?.label ?? 'Agent'} · $elapsedLabel';
-  }
-
-  Widget _buildPill(AgentRunStateData? runState) {
-    final isRunning = runState?.status == AgentRunStatus.running;
-    return Tooltip(
-      message: 'Open panel',
-      child: GestureDetector(
-        onTap: widget.controller.reopen,
-        child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: isRunning ? AppStyling.spaceLg : AppStyling.spaceSm,
-          vertical: AppStyling.spaceSm,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceRaised,
-          border: Border.all(color: AppColors.borderStrong),
-          borderRadius: BorderRadius.circular(AppStyling.radiusXl),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isRunning) ...[
-              Container(
-                width: 7,
-                height: 7,
-                decoration: const BoxDecoration(
-                  color: AppColors.statusInProgress,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: AppStyling.spaceSm),
-              Text(_label(runState), style: AppStyling.bodySm),
-              const SizedBox(width: AppStyling.spaceSm),
-            ],
-            const Icon(Icons.keyboard_arrow_up, size: 14, color: AppColors.textSecondary),
-          ],
-        ),
-      ),
-    ),
-    );
-  }
+  const _DockReopenPill({required this.controller});
 
   @override
   Widget build(BuildContext context) {
-    final runController = widget.state.agentRunController;
     return Align(
       alignment: Alignment.bottomRight,
       child: Padding(
         padding: const EdgeInsets.all(AppStyling.spaceLg),
-        child: runController == null
-            ? _buildPill(null)
-            : StreamBuilder<AgentRunStateData>(
-                stream: runController.stream,
-                initialData: runController.state,
-                builder: (context, snapshot) => _buildPill(snapshot.data),
+        child: Tooltip(
+          message: 'Open panel',
+          child: GestureDetector(
+            onTap: controller.reopen,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppStyling.spaceSm,
+                vertical: AppStyling.spaceSm,
               ),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceRaised,
+                border: Border.all(color: AppColors.borderStrong),
+                borderRadius: BorderRadius.circular(AppStyling.radiusXl),
+              ),
+              child: const Icon(Icons.keyboard_arrow_up, size: 14, color: AppColors.textSecondary),
+            ),
+          ),
+        ),
       ),
     );
   }

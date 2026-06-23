@@ -1,7 +1,6 @@
 import 'package:crm/core/state/state.dart';
-import 'package:crm/features/agent_run/api.dart';
 
-enum DockPane { terminal, agent, chat }
+enum DockPane { terminal, chat }
 
 const double dockMinHeight = 120;
 const double dockDefaultHeight = 336;
@@ -17,14 +16,12 @@ class DockStateData {
   final bool collapsed;
   final Set<DockPane> activePanes;
   final Map<DockPane, double> paneWidthOverrides;
-  final AgentRunController? agentRunController;
 
   const DockStateData({
     this.heightPx = dockDefaultHeight,
     this.collapsed = false,
     this.activePanes = _defaultActivePanes,
     this.paneWidthOverrides = const {},
-    this.agentRunController,
   });
 
   DockStateData copyWith({
@@ -32,17 +29,12 @@ class DockStateData {
     bool? collapsed,
     Set<DockPane>? activePanes,
     Map<DockPane, double>? paneWidthOverrides,
-    AgentRunController? agentRunController,
-    bool clearAgentRunController = false,
   }) {
     return DockStateData(
       heightPx: heightPx ?? this.heightPx,
       collapsed: collapsed ?? this.collapsed,
       activePanes: activePanes ?? this.activePanes,
       paneWidthOverrides: paneWidthOverrides ?? this.paneWidthOverrides,
-      agentRunController: clearAgentRunController
-          ? null
-          : (agentRunController ?? this.agentRunController),
     );
   }
 }
@@ -63,8 +55,6 @@ class DockController extends StreamState<DockStateData> {
     update((current) => current.copyWith(collapsed: false));
   }
 
-  /// Toggles [pane]'s membership in [DockStateData.activePanes]. No-op if
-  /// [pane] is the only active pane — at least one pane must stay visible.
   void togglePane(DockPane pane) {
     update((current) {
       final active = current.activePanes;
@@ -76,8 +66,6 @@ class DockController extends StreamState<DockStateData> {
     });
   }
 
-  /// Sets a fixed pixel width for [pane], clamping so every currently
-  /// visible pane keeps at least [dockMinPaneWidth].
   void setPaneWidth(DockPane pane, double widthPx, {required double totalWidthPx}) {
     update((current) {
       final visibleCount = current.activePanes.length;
@@ -90,22 +78,5 @@ class DockController extends StreamState<DockStateData> {
         paneWidthOverrides: {...current.paneWidthOverrides, pane: clamped},
       );
     });
-  }
-
-  /// Routes an [AgentRunController] into the dock, adding the Agent pane to
-  /// the visible set (without removing other active panes) and expanding the
-  /// dock if collapsed.
-  void setAgentRunController(AgentRunController controller) {
-    update((current) {
-      return current.copyWith(
-        agentRunController: controller,
-        collapsed: false,
-        activePanes: {...current.activePanes, DockPane.agent},
-      );
-    });
-  }
-
-  void clearAgentRunController() {
-    update((current) => current.copyWith(clearAgentRunController: true));
   }
 }

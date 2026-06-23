@@ -1,28 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:crm/features/agent_run/domain/controller/agent_run_controller.dart';
-import 'package:crm/features/agent_run/domain/model/agent_event.dart';
-import 'package:crm/features/agent_run/domain/repository/agent_run_repository.dart';
 import 'package:crm/features/kanban/presentation/state/dock_state.dart';
-
-class FakeAgentRunRepository implements AgentRunRepository {
-  @override
-  Stream<AgentEvent> run({
-    required String skill,
-    required String repoPath,
-    Map<String, dynamic>? context,
-  }) {
-    return const Stream<AgentEvent>.empty();
-  }
-}
 
 void main() {
   group('DockController', () {
+    test('DockPane has exactly two values: terminal and chat', () {
+      expect(DockPane.values.length, 2);
+      expect(DockPane.values, containsAll([DockPane.terminal, DockPane.chat]));
+    });
+
     test('starts not collapsed with default height and default active panes', () {
       final controller = DockController();
 
       expect(controller.state.collapsed, isFalse);
       expect(controller.state.heightPx, dockDefaultHeight);
-      expect(controller.state.activePanes, {DockPane.terminal, DockPane.chat});
+      expect(controller.state.activePanes, {DockPane.terminal});
       expect(controller.state.paneWidthOverrides, isEmpty);
 
       controller.dispose();
@@ -82,9 +73,9 @@ void main() {
     test('togglePane() adds an inactive pane to activePanes', () {
       final controller = DockController();
 
-      controller.togglePane(DockPane.agent);
+      controller.togglePane(DockPane.chat);
 
-      expect(controller.state.activePanes, {DockPane.terminal, DockPane.chat, DockPane.agent});
+      expect(controller.state.activePanes, {DockPane.terminal, DockPane.chat});
 
       controller.dispose();
     });
@@ -92,6 +83,7 @@ void main() {
     test('togglePane() removes an active pane from activePanes', () {
       final controller = DockController();
 
+      controller.togglePane(DockPane.chat);
       controller.togglePane(DockPane.terminal);
 
       expect(controller.state.activePanes, {DockPane.chat});
@@ -103,11 +95,8 @@ void main() {
       final controller = DockController();
 
       controller.togglePane(DockPane.terminal);
-      expect(controller.state.activePanes, {DockPane.chat});
 
-      controller.togglePane(DockPane.chat);
-
-      expect(controller.state.activePanes, {DockPane.chat});
+      expect(controller.state.activePanes, {DockPane.terminal});
 
       controller.dispose();
     });
@@ -132,10 +121,10 @@ void main() {
       controller.dispose();
     });
 
-    test('setPaneWidth() clamps so other visible panes keep at least dockMinPaneWidth', () {
+    test('setPaneWidth() clamps so other visible pane keeps at least dockMinPaneWidth', () {
       final controller = DockController();
-      // Default active panes: terminal, chat. 1000px total, min pane width
-      // 240px => terminal can be at most 1000 - 240 = 760px.
+      controller.togglePane(DockPane.chat);
+      // Two panes visible; terminal can be at most 1000 - 240 = 760px.
       controller.setPaneWidth(DockPane.terminal, 900, totalWidthPx: 1000);
 
       expect(controller.state.paneWidthOverrides[DockPane.terminal], 1000 - dockMinPaneWidth);
@@ -143,22 +132,10 @@ void main() {
       controller.dispose();
     });
 
-    test('setPaneWidth() clamps against all visible panes with three active', () {
-      final controller = DockController();
-      controller.togglePane(DockPane.agent);
-      // Three panes visible; terminal can be at most
-      // 1000 - (240 * 2) = 520px.
-      controller.setPaneWidth(DockPane.terminal, 900, totalWidthPx: 1000);
-
-      expect(controller.state.paneWidthOverrides[DockPane.terminal], 1000 - (dockMinPaneWidth * 2));
-
-      controller.dispose();
-    });
-
     test('collapse()/reopen() preserve activePanes, paneWidthOverrides, and heightPx', () {
       final controller = DockController();
 
-      controller.togglePane(DockPane.agent);
+      controller.togglePane(DockPane.chat);
       controller.setPaneWidth(DockPane.terminal, 300, totalWidthPx: 1000);
       controller.setHeight(450);
 
@@ -179,52 +156,6 @@ void main() {
       expect(controller.state.heightPx, heightBefore);
 
       controller.dispose();
-    });
-
-    test('setAgentRunController() adds DockPane.agent without removing other active panes', () {
-      final controller = DockController();
-      final runController = AgentRunController(FakeAgentRunRepository());
-
-      controller.togglePane(DockPane.terminal); // -> only chat active
-      expect(controller.state.activePanes, {DockPane.chat});
-
-      controller.setAgentRunController(runController);
-
-      expect(controller.state.activePanes, {DockPane.chat, DockPane.agent});
-      expect(controller.state.agentRunController, runController);
-
-      controller.dispose();
-      runController.dispose();
-    });
-
-    test('setAgentRunController() clears collapsed', () {
-      final controller = DockController();
-      final runController = AgentRunController(FakeAgentRunRepository());
-
-      controller.collapse();
-      expect(controller.state.collapsed, isTrue);
-
-      controller.setAgentRunController(runController);
-
-      expect(controller.state.collapsed, isFalse);
-
-      controller.dispose();
-      runController.dispose();
-    });
-
-    test('clearAgentRunController() clears the controller reference', () {
-      final controller = DockController();
-      final runController = AgentRunController(FakeAgentRunRepository());
-
-      controller.setAgentRunController(runController);
-      expect(controller.state.agentRunController, runController);
-
-      controller.clearAgentRunController();
-
-      expect(controller.state.agentRunController, isNull);
-
-      controller.dispose();
-      runController.dispose();
     });
   });
 }
