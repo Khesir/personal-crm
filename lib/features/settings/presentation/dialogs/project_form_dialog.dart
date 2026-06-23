@@ -21,8 +21,6 @@ class ProjectFormDialog extends StatefulWidget {
 class _ProjectFormDialogState extends State<ProjectFormDialog> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _pathCtrl;
-  late bool _hasBugReports;
-  late bool _hasAnnouncements;
   bool _saving = false;
 
   bool get _isEditing => widget.project != null;
@@ -42,8 +40,6 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
     final project = widget.project;
     _nameCtrl = TextEditingController(text: project?.name ?? '');
     _pathCtrl = TextEditingController(text: project?.localPath ?? '');
-    _hasBugReports = project?.hasBugReports ?? false;
-    _hasAnnouncements = project?.hasAnnouncements ?? false;
     _nameCtrl.addListener(() => setState(() {}));
   }
 
@@ -71,16 +67,9 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
         widget.project!.id,
         name: name,
         localPath: path,
-        hasBugReports: _hasBugReports,
-        hasAnnouncements: _hasAnnouncements,
       );
     } else {
-      await widget.controller.addProject(
-        name,
-        path,
-        hasBugReports: _hasBugReports,
-        hasAnnouncements: _hasAnnouncements,
-      );
+      await widget.controller.addProject(name, path);
     }
     if (mounted) Navigator.of(context).pop();
   }
@@ -108,18 +97,6 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
               _PathField(controller: _pathCtrl, onPickDirectory: _pickDirectory),
               const SizedBox(height: AppStyling.spaceLg),
               _ProjectKeyPreview(value: _previewKey),
-              const SizedBox(height: AppStyling.spaceLg),
-              _ToggleRow(
-                label: 'Has Bug Reports',
-                value: _hasBugReports,
-                onChanged: (v) => setState(() => _hasBugReports = v),
-              ),
-              const SizedBox(height: AppStyling.spaceSm),
-              _ToggleRow(
-                label: 'Has Announcements',
-                value: _hasAnnouncements,
-                onChanged: (v) => setState(() => _hasAnnouncements = v),
-              ),
               const SizedBox(height: AppStyling.spaceXl),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -286,29 +263,6 @@ class _ProjectKeyPreview extends StatelessWidget {
             style: AppStyling.monoSm.copyWith(color: AppColors.textMuted),
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _ToggleRow extends StatelessWidget {
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _ToggleRow({required this.label, required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: AppColors.accent,
-        ),
-        const SizedBox(width: AppStyling.spaceSm),
-        Text(label, style: AppStyling.bodySm),
       ],
     );
   }

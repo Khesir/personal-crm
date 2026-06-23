@@ -136,15 +136,6 @@ class _ProjectCard extends StatelessWidget {
                   project.localPath,
                   style: AppStyling.monoSm.copyWith(color: AppColors.textSecondary),
                 ),
-                const SizedBox(height: AppStyling.spaceSm),
-                Row(
-                  children: [
-                    if (project.hasBugReports) const _Tag(label: 'Bug Reports'),
-                    if (project.hasBugReports && project.hasAnnouncements)
-                      const SizedBox(width: AppStyling.spaceSm),
-                    if (project.hasAnnouncements) const _Tag(label: 'Announcements'),
-                  ],
-                ),
               ],
             ),
           ),
@@ -159,27 +150,6 @@ class _ProjectCard extends StatelessWidget {
             tooltip: 'Delete',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  final String label;
-
-  const _Tag({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppStyling.spaceSm, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.accentBg,
-        borderRadius: BorderRadius.circular(AppStyling.radiusSm),
-      ),
-      child: Text(
-        label,
-        style: AppStyling.monoSm.copyWith(color: AppColors.accentLight),
       ),
     );
   }

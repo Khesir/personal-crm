@@ -5,7 +5,6 @@ class ShellController extends StreamState<ShellStateData> {
   ShellController()
       : super(const ShellStateData(
           selectedTab: AppTab.home,
-          selectedProjectSection: ProjectSection.kanban,
           selectedSettingsSection: SettingsSection.projects,
         ));
 
@@ -14,18 +13,7 @@ class ShellController extends StreamState<ShellStateData> {
   }
 
   void selectProject(String projectId) {
-    emit(state.copyWith(
-      selectedProjectId: projectId,
-      selectedProjectSection: ProjectSection.kanban,
-    ));
-  }
-
-  void selectProjectSection(
-    ProjectSection section, {
-    Set<ProjectSection>? enabledSections,
-  }) {
-    if (enabledSections != null && !enabledSections.contains(section)) return;
-    emit(state.copyWith(selectedProjectSection: section));
+    emit(state.copyWith(selectedProjectId: projectId));
   }
 
   void selectSettingsSection(SettingsSection section) {

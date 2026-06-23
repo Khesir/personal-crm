@@ -10,18 +10,6 @@ enum AppTab {
       };
 }
 
-enum ProjectSection {
-  kanban,
-  bugReports,
-  announcements;
-
-  String get label => switch (this) {
-        ProjectSection.kanban => 'Kanban',
-        ProjectSection.bugReports => 'Bug Reports',
-        ProjectSection.announcements => 'Announcements',
-      };
-}
-
 enum SettingsSection {
   projects,
   services,
@@ -41,26 +29,22 @@ enum SettingsSection {
 class ShellStateData {
   final AppTab selectedTab;
   final String? selectedProjectId;
-  final ProjectSection selectedProjectSection;
   final SettingsSection selectedSettingsSection;
 
   const ShellStateData({
     required this.selectedTab,
     this.selectedProjectId,
-    required this.selectedProjectSection,
     required this.selectedSettingsSection,
   });
 
   ShellStateData copyWith({
     AppTab? selectedTab,
     String? selectedProjectId,
-    ProjectSection? selectedProjectSection,
     SettingsSection? selectedSettingsSection,
   }) {
     return ShellStateData(
       selectedTab: selectedTab ?? this.selectedTab,
       selectedProjectId: selectedProjectId ?? this.selectedProjectId,
-      selectedProjectSection: selectedProjectSection ?? this.selectedProjectSection,
       selectedSettingsSection: selectedSettingsSection ?? this.selectedSettingsSection,
     );
   }

@@ -27,8 +27,6 @@ void main() {
           name: 'personal-crm',
           localPath: r'C:\repo\crm',
           projectKey: 'personal-crm',
-          hasBugReports: true,
-          hasAnnouncements: true,
         ),
       ]);
       final controller = ProjectsController(repo);
@@ -54,8 +52,6 @@ void main() {
       expect(project.projectKey, 'my-cool-project');
       expect(project.name, 'My Cool Project');
       expect(project.localPath, r'C:\repo\my-cool-project');
-      expect(project.hasBugReports, isFalse);
-      expect(project.hasAnnouncements, isFalse);
 
       controller.dispose();
     });
@@ -99,8 +95,6 @@ void main() {
         original.id,
         name: 'Alpha Renamed',
         localPath: r'C:\repo\alpha-renamed',
-        hasBugReports: true,
-        hasAnnouncements: true,
       );
 
       final updated = controller.data!.first;
@@ -108,8 +102,6 @@ void main() {
       expect(updated.projectKey, original.projectKey);
       expect(updated.name, 'Alpha Renamed');
       expect(updated.localPath, r'C:\repo\alpha-renamed');
-      expect(updated.hasBugReports, isTrue);
-      expect(updated.hasAnnouncements, isTrue);
 
       controller.dispose();
     });

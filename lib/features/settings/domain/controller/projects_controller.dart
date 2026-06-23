@@ -10,12 +10,7 @@ class ProjectsController extends StreamState<AsyncState<List<Project>>> {
 
   Future<void> load() => execute(() => repository.getProjects());
 
-  Future<void> addProject(
-    String name,
-    String localPath, {
-    bool hasBugReports = false,
-    bool hasAnnouncements = false,
-  }) async {
+  Future<void> addProject(String name, String localPath) async {
     final current = data ?? [];
     final id = uniqueSlug(name, current.map((p) => p.id));
     final project = Project(
@@ -23,8 +18,6 @@ class ProjectsController extends StreamState<AsyncState<List<Project>>> {
       name: name,
       localPath: localPath,
       projectKey: id,
-      hasBugReports: hasBugReports,
-      hasAnnouncements: hasAnnouncements,
     );
     final updated = [...current, project];
     await execute(() async {
@@ -37,19 +30,12 @@ class ProjectsController extends StreamState<AsyncState<List<Project>>> {
     String id, {
     String? name,
     String? localPath,
-    bool? hasBugReports,
-    bool? hasAnnouncements,
   }) async {
     final current = data ?? [];
     final updated = [
       for (final project in current)
         if (project.id == id)
-          project.copyWith(
-            name: name,
-            localPath: localPath,
-            hasBugReports: hasBugReports,
-            hasAnnouncements: hasAnnouncements,
-          )
+          project.copyWith(name: name, localPath: localPath)
         else
           project,
     ];
