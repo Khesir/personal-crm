@@ -37,6 +37,21 @@ class IssueFrontmatterParser {
     );
   }
 
+  /// Strips the frontmatter block from [contents] and returns the remaining
+  /// body. Falls back to returning [contents] unchanged if no well-formed
+  /// frontmatter block is found, rather than throwing.
+  String splitBody(String contents) {
+    final lines = contents.split('\n');
+    if (lines.isEmpty || lines.first.trim() != _frontmatterDelimiter) {
+      return contents;
+    }
+
+    final endIndex = _findFrontmatterEnd(lines);
+    if (endIndex == -1) return contents;
+
+    return lines.sublist(endIndex + 1).join('\n').trim();
+  }
+
   int _findFrontmatterEnd(List<String> lines) {
     for (var i = 1; i < lines.length; i++) {
       if (lines[i].trim() == _frontmatterDelimiter) return i;

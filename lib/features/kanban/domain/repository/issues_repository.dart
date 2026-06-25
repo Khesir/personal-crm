@@ -34,6 +34,11 @@ abstract class IssuesRepository {
   /// `status:` frontmatter field.
   Future<Issue> moveIssue(Issue issue, IssueStatus newStatus);
 
+  /// Overwrites the file at [issue.filePath] with [rawContent] exactly as
+  /// given, then re-reads and re-parses it from disk to return the
+  /// canonical [Issue]. The issue's status/folder location is unchanged.
+  Future<Issue> updateIssueRaw(Issue issue, String rawContent);
+
   /// Permanently deletes the issue's file from disk.
   Future<void> deleteIssue(Issue issue);
 }

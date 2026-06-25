@@ -1,16 +1,20 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:crm/core/theme/theme.dart';
 import '../../domain/controller/issues_controller.dart';
 import '../../domain/helper/acceptance_criteria_parser.dart';
+import '../../domain/helper/issue_raw_edit_validator.dart';
 import '../../domain/model/issue.dart';
 import '../dialogs/issue_delete_dialog.dart';
-import '../dialogs/issue_edit_dialog.dart';
+import '../dialogs/issue_discard_changes_dialog.dart';
 import '../widget/acceptance_criteria_list.dart';
+import '../widget/issue_edit_tabs.dart';
 import '../widget/issue_metadata_panel.dart';
 import '../widget/issue_status_picker.dart';
 import '../widget/markdown_issue_body.dart';
 
-class IssueDetailSection extends StatelessWidget {
+class IssueDetailSection extends StatefulWidget {
   final IssuesController controller;
   final Issue issue;
   final VoidCallback onBack;
@@ -26,19 +30,93 @@ class IssueDetailSection extends StatelessWidget {
     this.readOnly = false,
   });
 
+  @override
+  State<IssueDetailSection> createState() => _IssueDetailSectionState();
+}
+
+class _IssueDetailSectionState extends State<IssueDetailSection> {
+  bool _editing = false;
+  bool _committing = false;
+  String? _commitError;
+  late TextEditingController _rawContentController;
+  late String _rawContentSeed;
+
+  @override
+  void dispose() {
+    if (_editing) _rawContentController.dispose();
+    super.dispose();
+  }
+
   void _toggleCriteria(int index) {
-    controller.toggleAcceptanceCriteria(issue, index);
+    widget.controller.toggleAcceptanceCriteria(widget.issue, index);
   }
 
   void _move(IssueStatus newStatus) {
-    controller.moveIssue(issue, newStatus);
+    widget.controller.moveIssue(widget.issue, newStatus);
   }
 
-  void _edit(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => IssueEditDialog(controller: controller, issue: issue),
-    );
+  void _enterEditMode() {
+    final rawContents = File(widget.issue.filePath).readAsStringSync();
+    setState(() {
+      _rawContentController = TextEditingController(text: rawContents);
+      _rawContentSeed = rawContents;
+      _editing = true;
+      _commitError = null;
+    });
+  }
+
+  bool get _hasUnsavedChanges => _rawContentController.text != _rawContentSeed;
+
+  void _handleBack(BuildContext context) {
+    if (_editing && _hasUnsavedChanges) {
+      showDialog(
+        context: context,
+        builder: (_) => IssueDiscardChangesDialog(onConfirm: widget.onBack),
+      );
+      return;
+    }
+    widget.onBack();
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _editing = false;
+      _commitError = null;
+    });
+    _rawContentController.dispose();
+  }
+
+  Future<void> _commitEdit() async {
+    final result = validateIssueRawEdit(widget.issue, _rawContentController.text);
+    if (result is IssueRawEditFailure) {
+      setState(() => _commitError = _commitErrorMessage(result.reason));
+      return;
+    }
+
+    setState(() {
+      _committing = true;
+      _commitError = null;
+    });
+    await widget.controller.updateIssueRaw(widget.issue, _rawContentController.text);
+    if (!mounted) return;
+    setState(() {
+      _committing = false;
+      _editing = false;
+    });
+    _rawContentController.dispose();
+  }
+
+  String _commitErrorMessage(IssueRawEditFailureReason reason) {
+    switch (reason) {
+      case IssueRawEditFailureReason.parseError:
+        return 'Could not parse this content. Check the frontmatter and try again.';
+      case IssueRawEditFailureReason.idChanged:
+        return '`id` cannot be changed.';
+      case IssueRawEditFailureReason.createdAtChanged:
+        return '`created_at` cannot be changed.';
+      case IssueRawEditFailureReason.statusChanged:
+        return '`status` cannot be changed here. Use the status picker instead.';
+    }
   }
 
   void _confirmDelete(BuildContext context) {
@@ -46,8 +124,8 @@ class IssueDetailSection extends StatelessWidget {
       context: context,
       builder: (_) => IssueDeleteDialog(
         onConfirm: () async {
-          await controller.deleteIssue(issue);
-          onDeleted();
+          await widget.controller.deleteIssue(widget.issue);
+          widget.onDeleted();
         },
       ),
     );
@@ -55,6 +133,7 @@ class IssueDetailSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final issue = widget.issue;
     final criteria = parseAcceptanceCriteria(issue.body);
     final bodyWithoutCriteria = removeAcceptanceCriteriaSection(issue.body);
 
@@ -65,11 +144,15 @@ class IssueDetailSection extends StatelessWidget {
         children: [
           _DetailHeader(
             issue: issue,
-            onBack: onBack,
+            onBack: () => _handleBack(context),
             onMove: _move,
-            onEdit: () => _edit(context),
+            onEdit: _enterEditMode,
             onDelete: () => _confirmDelete(context),
-            readOnly: readOnly,
+            readOnly: widget.readOnly,
+            editing: _editing,
+            committing: _committing,
+            onCancelEdit: _cancelEdit,
+            onCommitEdit: _commitEdit,
           ),
           const SizedBox(height: AppStyling.spaceLg),
           Expanded(
@@ -77,21 +160,26 @@ class IssueDetailSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        MarkdownIssueBody(content: bodyWithoutCriteria),
-                        if (criteria.isNotEmpty) ...[
-                          const SizedBox(height: AppStyling.spaceLg),
-                          AcceptanceCriteriaList(
-                            items: criteria,
-                            onToggle: readOnly ? null : _toggleCriteria,
+                  child: _editing
+                      ? IssueEditTabs(
+                          controller: _rawContentController,
+                          errorText: _commitError,
+                        )
+                      : SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              MarkdownIssueBody(content: bodyWithoutCriteria),
+                              if (criteria.isNotEmpty) ...[
+                                const SizedBox(height: AppStyling.spaceLg),
+                                AcceptanceCriteriaList(
+                                  items: criteria,
+                                  onToggle: widget.readOnly ? null : _toggleCriteria,
+                                ),
+                              ],
+                            ],
                           ),
-                        ],
-                      ],
-                    ),
-                  ),
+                        ),
                 ),
                 const SizedBox(width: AppStyling.spaceLg),
                 IssueMetadataPanel(
@@ -133,6 +221,10 @@ class _DetailHeader extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final bool readOnly;
+  final bool editing;
+  final bool committing;
+  final VoidCallback onCancelEdit;
+  final VoidCallback onCommitEdit;
 
   const _DetailHeader({
     required this.issue,
@@ -140,6 +232,10 @@ class _DetailHeader extends StatelessWidget {
     required this.onMove,
     required this.onEdit,
     required this.onDelete,
+    required this.editing,
+    required this.committing,
+    required this.onCancelEdit,
+    required this.onCommitEdit,
     this.readOnly = false,
   });
 
@@ -160,19 +256,32 @@ class _DetailHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppStyling.spaceLg),
-        Expanded(
-          child: Text(
-            issue.title,
-            style: AppStyling.pageTitle,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        if (!readOnly) ...[
+        if (!editing)
+          Expanded(
+            child: Text(
+              issue.title,
+              style: AppStyling.pageTitle,
+              overflow: TextOverflow.ellipsis,
+            ),
+          )
+        else
+          const Spacer(),
+        if (!readOnly && !editing) ...[
           IssueStatusPicker(status: issue.status, onChanged: onMove),
           const SizedBox(width: AppStyling.spaceMd),
           _ActionButton(label: 'Edit', icon: Icons.edit_outlined, onTap: onEdit),
           const SizedBox(width: AppStyling.spaceMd),
           _ActionButton(label: 'Delete', icon: Icons.delete_outline, onTap: onDelete, destructive: true),
+        ],
+        if (!readOnly && editing) ...[
+          _ActionButton(label: 'Cancel', icon: Icons.close, onTap: onCancelEdit),
+          const SizedBox(width: AppStyling.spaceMd),
+          _ActionButton(
+            label: 'Commit changes',
+            icon: Icons.check,
+            onTap: committing ? null : onCommitEdit,
+            loading: committing,
+          ),
         ],
       ],
     );
@@ -182,14 +291,16 @@ class _DetailHeader extends StatelessWidget {
 class _ActionButton extends StatelessWidget {
   final String label;
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool destructive;
+  final bool loading;
 
   const _ActionButton({
     required this.label,
     required this.icon,
     required this.onTap,
     this.destructive = false,
+    this.loading = false,
   });
 
   @override
@@ -210,7 +321,14 @@ class _ActionButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: color),
+            if (loading)
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textSecondary),
+              )
+            else
+              Icon(icon, size: 16, color: color),
             const SizedBox(width: AppStyling.spaceXs),
             Text(label, style: AppStyling.bodySm.copyWith(color: color)),
           ],

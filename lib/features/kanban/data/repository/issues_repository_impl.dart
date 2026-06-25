@@ -143,6 +143,16 @@ class IssuesRepositoryImpl implements IssuesRepository {
   }
 
   @override
+  Future<Issue> updateIssueRaw(Issue issue, String rawContent) async {
+    final file = File(issue.filePath);
+    await file.writeAsString(rawContent);
+
+    final contents = await file.readAsString();
+    final reparsed = parser.parse(contents, issue.status, issue.filePath);
+    return reparsed!;
+  }
+
+  @override
   Future<Issue> moveIssue(Issue issue, IssueStatus newStatus) async {
     final file = File(issue.filePath);
     final contents = await file.readAsString();

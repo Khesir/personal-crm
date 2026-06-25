@@ -134,6 +134,31 @@ class FakeIssuesRepository implements IssuesRepository {
         if (existing.id != issue.id) existing,
     ];
   }
+
+  Issue? lastRawUpdateIssue;
+  String? lastRawUpdateContent;
+
+  @override
+  Future<Issue> updateIssueRaw(Issue issue, String rawContent) async {
+    lastRawUpdateIssue = issue;
+    lastRawUpdateContent = rawContent;
+
+    final updated = Issue(
+      id: issue.id,
+      title: issue.title,
+      feature: issue.feature,
+      status: issue.status,
+      createdAt: issue.createdAt,
+      tags: issue.tags,
+      body: issue.body,
+      filePath: issue.filePath,
+    );
+    issues = [
+      for (final existing in issues)
+        if (existing.id == issue.id) updated else existing,
+    ];
+    return updated;
+  }
 }
 
 void main() {
@@ -349,6 +374,31 @@ void main() {
       expect(controller.data!.last.id, 'bug-bug-123');
       expect(controller.data!.last.status, IssueStatus.backlog);
       expect(controller.data!.last.filePath, isNotEmpty);
+
+      controller.dispose();
+    });
+
+    test('updateIssueRaw() persists raw content and updates state', () async {
+      const issue = Issue(
+        id: 'issue-001',
+        title: 'Add OAuth login',
+        feature: 'user-auth',
+        status: IssueStatus.ready,
+        createdAt: null,
+        tags: ['auth'],
+        body: 'Body',
+        filePath: r'C:\repo\issues\ready\issue-001.md',
+      );
+      final repo = FakeIssuesRepository([issue]);
+      final controller = IssuesController(repo);
+      await controller.load(r'C:\repo');
+
+      const rawContent = '---\nid: issue-001\ntitle: New title\n---\n\nNew body';
+      await controller.updateIssueRaw(issue, rawContent);
+
+      expect(repo.lastRawUpdateIssue, issue);
+      expect(repo.lastRawUpdateContent, rawContent);
+      expect(controller.data!.first.id, 'issue-001');
 
       controller.dispose();
     });

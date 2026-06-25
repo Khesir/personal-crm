@@ -342,5 +342,48 @@ Body text here.
       expect(reloadedIssue.body, contains('## Stack Trace'));
       expect(reloadedIssue.body, contains('at foo()'));
     });
+
+    test('updateIssueRaw() overwrites the file with raw content and re-parses it', () async {
+      writeIssue('ready', 'issue-044.md', '''
+---
+id: issue-044
+title: Add OAuth login
+feature: user-auth
+status: ready
+created_at: 2026-06-10
+tags: [auth, backend]
+---
+
+## Description
+Body text here.
+''');
+      final issues = await repository.getIssues(tempDir.path);
+      final issue = issues.first;
+
+      const newRawContent = '''
+---
+id: issue-044
+title: Add OAuth login (v2)
+feature: auth
+status: ready
+created_at: 2026-06-10
+tags: [auth, oauth]
+---
+
+## Description
+Updated body.
+''';
+
+      final updated = await repository.updateIssueRaw(issue, newRawContent);
+
+      expect(File(issue.filePath).readAsStringSync(), newRawContent);
+      expect(updated.id, 'issue-044');
+      expect(updated.title, 'Add OAuth login (v2)');
+      expect(updated.feature, 'auth');
+      expect(updated.status, IssueStatus.ready);
+      expect(updated.tags, ['auth', 'oauth']);
+      expect(updated.body.trim(), '## Description\nUpdated body.');
+      expect(updated.filePath, issue.filePath);
+    });
   });
 }

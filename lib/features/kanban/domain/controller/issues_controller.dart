@@ -64,6 +64,11 @@ class IssuesController extends StreamState<AsyncState<List<Issue>>> {
     return updateIssue(issue, body: updatedBody);
   }
 
+  Future<void> updateIssueRaw(Issue issue, String rawContent) async {
+    final updated = await repository.updateIssueRaw(issue, rawContent);
+    _replaceIssue(updated);
+  }
+
   void _replaceIssue(Issue updated) {
     final current = data;
     if (current == null) return;
