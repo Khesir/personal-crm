@@ -2,7 +2,7 @@
 
 <img src="assets/icon.png" alt="Avyn" width="96" height="96"/>
 
-# Avyn
+# Avyn OS
 
 A personal desktop app combining project/issue tracking (kanban) with a local AI agent — persistent memory, tool access, and a self-hosted agent server.
 
