@@ -1,9 +1,14 @@
+import 'dart:io' show File;
+
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
 import '../../domain/controller/projects_controller.dart';
+import '../../domain/helper/project_avatar.dart';
 import '../../domain/model/project.dart';
 import '../dialogs/project_form_dialog.dart';
+import '../dialogs/remove_project_confirm_dialog.dart';
 
 class ProjectsSection extends StatelessWidget {
   final ProjectsController controller;
@@ -22,6 +27,16 @@ class ProjectsSection extends StatelessWidget {
       context: context,
       builder: (_) => ProjectFormDialog(controller: controller, project: project),
     );
+  }
+
+  Future<void> _confirmAndDelete(BuildContext context, Project project) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => RemoveProjectConfirmDialog(projectName: project.name),
+    );
+    if (confirmed == true) {
+      await controller.removeProject(project.id);
+    }
   }
 
   @override
@@ -86,7 +101,7 @@ class ProjectsSection extends StatelessWidget {
                     return _ProjectCard(
                       project: project,
                       onEdit: () => _openEditDialog(context, project),
-                      onDelete: () => controller.removeProject(project.id),
+                      onDelete: () => _confirmAndDelete(context, project),
                     );
                   },
                 );
@@ -117,6 +132,8 @@ class _ProjectCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+          _ProjectCardAvatar(project: project),
+          const SizedBox(width: AppStyling.spaceMd),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,6 +168,38 @@ class _ProjectCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProjectCardAvatar extends StatelessWidget {
+  final Project project;
+
+  const _ProjectCardAvatar({required this.project});
+
+  @override
+  Widget build(BuildContext context) {
+    final iconFileName = project.iconFileName;
+    final iconFile = iconFileName == null
+        ? null
+        : File(p.join(project.localPath, '.avyn', iconFileName));
+    final hasIcon = iconFile != null && iconFile.existsSync();
+
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: projectAvatarColor(project.id),
+        shape: BoxShape.circle,
+      ),
+      child: hasIcon
+          ? ClipOval(child: Image.file(iconFile, width: 40, height: 40, fit: BoxFit.cover))
+          : Center(
+              child: Text(
+                projectAvatarInitials(project.name),
+                style: AppStyling.bodySm.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+              ),
+            ),
     );
   }
 }

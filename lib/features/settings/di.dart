@@ -1,11 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'data/datasource/huggingface_datasource.dart';
+import 'data/datasource/project_metadata_datasource.dart';
 import 'data/datasource/projects_local_datasource.dart';
 import 'data/datasource/service_cards_local_datasource.dart';
 import 'data/repository/health_check_repository_impl.dart';
 import 'data/repository/hardware_info_repository_impl.dart';
 import 'data/repository/io_process_runner.dart';
+import 'data/repository/project_metadata_repository_impl.dart';
 import 'data/repository/projects_repository_impl.dart';
 import 'data/repository/service_cards_repository_impl.dart';
 import 'domain/controller/model_discovery_controller.dart';
@@ -21,7 +23,8 @@ Future<ProjectsController> createProjectsController() async {
   final prefs = await SharedPreferences.getInstance();
   final datasource = ProjectsLocalDatasource(prefs);
   final repository = ProjectsRepositoryImpl(datasource);
-  final controller = ProjectsController(repository);
+  final metadataRepository = ProjectMetadataRepositoryImpl(const ProjectMetadataDatasource());
+  final controller = ProjectsController(repository, metadataRepository);
   await controller.load();
   return controller;
 }

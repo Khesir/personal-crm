@@ -66,6 +66,12 @@ class FakeIssuesRepository implements IssuesRepository {
     ];
     return updated;
   }
+
+  @override
+  Future<void> initializeIssuesFolder(String localPath) async {}
+
+  @override
+  Future<bool> issuesFolderExists(String localPath) async => true;
 }
 
 const _issue = Issue(

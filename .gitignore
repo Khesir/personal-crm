@@ -5,6 +5,8 @@ agent/build/
 # Environment
 .env
 
+issues
+
 # Miscellaneous
 *.class
 *.log

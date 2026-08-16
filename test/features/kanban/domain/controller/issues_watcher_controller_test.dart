@@ -45,6 +45,12 @@ class FakeIssuesRepository implements IssuesRepository {
 
   @override
   Future<Issue> updateIssueRaw(Issue issue, String rawContent) async => issue;
+
+  @override
+  Future<void> initializeIssuesFolder(String localPath) async {}
+
+  @override
+  Future<bool> issuesFolderExists(String localPath) async => true;
 }
 
 Issue _issue(String id, String filePath) => Issue(

@@ -143,6 +143,19 @@ class IssuesRepositoryImpl implements IssuesRepository {
   }
 
   @override
+  Future<void> initializeIssuesFolder(String localPath) async {
+    for (final folder in _statusFolders.values) {
+      final dir = Directory(p.join(localPath, 'issues', folder));
+      if (!await dir.exists()) await dir.create(recursive: true);
+    }
+  }
+
+  @override
+  Future<bool> issuesFolderExists(String localPath) async {
+    return Directory(p.join(localPath, 'issues')).exists();
+  }
+
+  @override
   Future<Issue> updateIssueRaw(Issue issue, String rawContent) async {
     final file = File(issue.filePath);
     await file.writeAsString(rawContent);

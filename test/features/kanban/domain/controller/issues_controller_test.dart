@@ -159,6 +159,24 @@ class FakeIssuesRepository implements IssuesRepository {
     ];
     return updated;
   }
+
+  int initializeIssuesFolderCallCount = 0;
+  void Function(String localPath)? initializeIssuesFolderCallback;
+
+  @override
+  Future<void> initializeIssuesFolder(String localPath) async {
+    initializeIssuesFolderCallCount++;
+    initializeIssuesFolderCallback?.call(localPath);
+  }
+
+  bool folderExists = true;
+  String? lastFolderExistsCheckLocalPath;
+
+  @override
+  Future<bool> issuesFolderExists(String localPath) async {
+    lastFolderExistsCheckLocalPath = localPath;
+    return folderExists;
+  }
 }
 
 void main() {
@@ -399,6 +417,50 @@ void main() {
       expect(repo.lastRawUpdateIssue, issue);
       expect(repo.lastRawUpdateContent, rawContent);
       expect(controller.data!.first.id, 'issue-001');
+
+      controller.dispose();
+    });
+
+    test('load() populates folderExists from the repository', () async {
+      final repo = FakeIssuesRepository()..folderExists = false;
+      final controller = IssuesController(repo);
+
+      await controller.load(r'C:\repo');
+
+      expect(controller.folderExists, isFalse);
+      expect(repo.lastFolderExistsCheckLocalPath, r'C:\repo');
+
+      controller.dispose();
+    });
+
+    test('initializeIssuesFolder() calls the repository then reloads, flipping folderExists', () async {
+      final repo = FakeIssuesRepository()..folderExists = false;
+      final controller = IssuesController(repo);
+      await controller.load(r'C:\repo');
+      expect(controller.folderExists, isFalse);
+
+      var initializeCalled = false;
+      repo.initializeIssuesFolderCallback = (localPath) {
+        initializeCalled = true;
+        repo.folderExists = true;
+      };
+
+      await controller.initializeIssuesFolder();
+
+      expect(initializeCalled, isTrue);
+      expect(controller.folderExists, isTrue);
+      expect(controller.data, isEmpty);
+
+      controller.dispose();
+    });
+
+    test('initializeIssuesFolder() is a no-op if load() has not been called yet', () async {
+      final repo = FakeIssuesRepository()..folderExists = false;
+      final controller = IssuesController(repo);
+
+      await controller.initializeIssuesFolder();
+
+      expect(repo.initializeIssuesFolderCallCount, 0);
 
       controller.dispose();
     });

@@ -1,18 +1,31 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:crm/core/di/service_locator.dart';
 import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
 import 'package:crm/core/ui/desktop_title_bar.dart';
-import 'package:crm/features/agent/api.dart';
-import 'package:crm/features/home/api.dart';
 import 'package:crm/features/kanban/api.dart';
 import 'package:crm/features/settings/api.dart';
 import '../../domain/controller/shell_controller.dart';
 import '../state/shell_state.dart';
 import '../widget/app_rail.dart';
 import '../widget/app_sidebar.dart';
-import '../widget/project_content_dock_overlay.dart';
+
+/// Default folder-existence checker for [shouldActivateProjectFolder].
+bool _folderExistsOnDisk(String path) => Directory(path).existsSync();
+
+/// Whether a project's folder should be activated (file watcher started,
+/// terminal spawned) given its [localPath]. Kept as a small, pure,
+/// injectable function so it's unit-testable without touching the real
+/// filesystem — [folderExists] defaults to a real `Directory.existsSync()`
+/// check.
+bool shouldActivateProjectFolder(
+  String localPath, {
+  bool Function(String path) folderExists = _folderExistsOnDisk,
+}) {
+  return folderExists(localPath);
+}
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -23,16 +36,19 @@ class AppShellScreen extends StatefulWidget {
 
 class _AppShellScreenState extends State<AppShellScreen> {
   late final ShellController _controller;
+  late final Future<ProjectsController> _projectsControllerFuture;
 
   @override
   void initState() {
     super.initState();
     _controller = ShellController();
+    _projectsControllerFuture = createProjectsController();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _projectsControllerFuture.then((controller) => controller.dispose());
     super.dispose();
   }
 
@@ -48,10 +64,39 @@ class _AppShellScreenState extends State<AppShellScreen> {
             Expanded(
               child: Row(
                 children: [
-                  AppRail(controller: _controller),
+                  FutureBuilder<ProjectsController>(
+                    future: _projectsControllerFuture,
+                    builder: (context, snapshot) {
+                      final projectsController = snapshot.data;
+                      if (projectsController == null) {
+                        return Container(
+                          width: AppStyling.railWidth,
+                          color: AppColors.titlebarBackground,
+                        );
+                      }
+                      return AppRail(
+                        controller: _controller,
+                        projectsController: projectsController,
+                      );
+                    },
+                  ),
                   Container(width: 1, color: AppColors.border),
-                  AppSidebar(controller: _controller),
-                  Container(width: 1, color: AppColors.border),
+                  StreamBuilder<ShellStateData>(
+                    stream: _controller.stream,
+                    initialData: _controller.state,
+                    builder: (context, snapshot) {
+                      final shellState = snapshot.data!;
+                      if (!shellState.showingSettings) {
+                        return const SizedBox.shrink();
+                      }
+                      return Row(
+                        children: [
+                          AppSidebar(controller: _controller),
+                          Container(width: 1, color: AppColors.border),
+                        ],
+                      );
+                    },
+                  ),
                   Expanded(
                     child: StreamBuilder<ShellStateData>(
                       stream: _controller.stream,
@@ -79,13 +124,10 @@ class _ContentArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (shellState.selectedTab) {
-      AppTab.home => HomeChatSection(controller: locator.get<AgentController>()),
-      AppTab.projects => _ProjectsPlaceholder(shellState: shellState),
-      AppTab.settings => _SettingsContent(
-        section: shellState.selectedSettingsSection,
-      ),
-    };
+    if (shellState.showingSettings) {
+      return _SettingsContent(section: shellState.selectedSettingsSection);
+    }
+    return _ProjectsPlaceholder(shellState: shellState);
   }
 }
 
@@ -100,9 +142,6 @@ class _SettingsContent extends StatelessWidget {
       color: AppColors.background,
       child: switch (section) {
         SettingsSection.projects => const _SettingsProjectsContent(),
-        SettingsSection.services => const _ServicesContent(),
-        SettingsSection.brain => BrainSection(processRunner: createProcessRunner()),
-        SettingsSection.agent => AgentSettingsSection(controller: locator.get<AgentController>()),
         SettingsSection.about => const AboutSection(),
       },
     );
@@ -124,26 +163,6 @@ class _SettingsProjectsContent extends StatelessWidget {
           );
         }
         return ProjectsSection(controller: controller);
-      },
-    );
-  }
-}
-
-class _ServicesContent extends StatelessWidget {
-  const _ServicesContent();
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<ServiceCardsController>(
-      future: createServiceCardsController(),
-      builder: (context, snapshot) {
-        final controller = snapshot.data;
-        if (controller == null) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.accent),
-          );
-        }
-        return ServicesSection(controller: controller);
       },
     );
   }
@@ -203,13 +222,12 @@ class _ProjectsContentState extends State<_ProjectsContent> {
   late IssuesController _issuesController;
   late IssuesWatcherController _watcherController;
   late IssuesRepository _issuesRepository;
-  late DockController _dockController;
   String? _loadedLocalPath;
   String? _selectedIssueId;
+  bool _folderMissing = false;
 
   String? _selectedArchive;
   IssuesController? _archiveController;
-  TerminalSessionController? _terminalSessionController;
 
   @override
   void initState() {
@@ -217,7 +235,6 @@ class _ProjectsContentState extends State<_ProjectsContent> {
     _issuesController = createIssuesController();
     _watcherController = createIssuesWatcherController(_issuesController);
     _issuesRepository = createIssuesRepository();
-    _dockController = createDockController();
     _loadIssuesIfNeeded();
   }
 
@@ -232,25 +249,23 @@ class _ProjectsContentState extends State<_ProjectsContent> {
     _issuesController.dispose();
     _watcherController.dispose();
     _archiveController?.dispose();
-    _dockController.dispose();
-    _terminalSessionController?.dispose();
     super.dispose();
   }
 
   void _loadIssuesIfNeeded() {
     final localPath = widget.selectedProject?.localPath;
-    if (localPath != null && localPath != _loadedLocalPath) {
-      _loadedLocalPath = localPath;
-      _issuesController.load(localPath);
-      _resetArchiveSelection();
-      _ensureTerminalSessionController(localPath);
-      _watcherController.start(localPath);
-    }
-  }
+    if (localPath == null) return;
+    if (localPath == _loadedLocalPath && !_folderMissing) return;
 
-  void _ensureTerminalSessionController(String localPath) {
-    _terminalSessionController?.dispose();
-    _terminalSessionController = createTerminalSessionController(localPath);
+    _loadedLocalPath = localPath;
+    if (!shouldActivateProjectFolder(localPath)) {
+      _folderMissing = true;
+      return;
+    }
+    _folderMissing = false;
+    _issuesController.load(localPath);
+    _resetArchiveSelection();
+    _watcherController.start(localPath);
   }
 
   void _resetArchiveSelection() {
@@ -313,70 +328,55 @@ class _ProjectsContentState extends State<_ProjectsContent> {
           if (!showingIssueDetail)
             Padding(
               padding: const EdgeInsets.all(AppStyling.spaceXl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              project?.name ?? 'Projects',
-                              style: AppStyling.pageTitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: AppStyling.spaceXs),
-                            Text(
-                              project == null
-                                  ? 'Select a project to see its kanban board.'
-                                  : _selectedArchive != null
-                                  ? 'Viewing archived board: $_selectedArchive — read-only'
-                                  : 'Manage this project\'s work.',
-                              style: AppStyling.pageSub,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (project != null) ...[
-                    const SizedBox(height: AppStyling.spaceMd),
-                    Row(
-                      mainAxisAlignment: _selectedArchive == null
-                          ? MainAxisAlignment.spaceBetween
-                          : MainAxisAlignment.start,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _ArchiveDropdown(
-                          selectedArchive: _selectedArchive,
-                          onOpen: _listArchives,
-                          onSelect: _selectArchive,
+                        Text(
+                          project?.name ?? 'Projects',
+                          style: AppStyling.pageTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        if (_selectedArchive != null) ...[
-                          const SizedBox(width: AppStyling.spaceMd),
-                          const _ReadOnlyBadge(),
-                        ] else ...[
-                          Row(
-                            children: [
-                              StreamStateBuilder<IssuesWatcherStateData>(
-                                state: _watcherController,
-                                builder: (context, data) => WatchPill(
-                                  watching: data.watching,
-                                  lastSyncedAt: data.lastSyncedAt,
-                                ),
-                              ),
-                              const SizedBox(width: AppStyling.spaceMd),
-                              _RescanButton(onPressed: _rescan),
-                            ],
+                        if (project == null || _selectedArchive != null) ...[
+                          const SizedBox(height: AppStyling.spaceXs),
+                          Text(
+                            project == null
+                                ? 'Select a project to see its kanban board.'
+                                : 'Viewing archived board: $_selectedArchive — read-only',
+                            style: AppStyling.pageSub,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ],
                     ),
+                  ),
+                  if (project != null && !_folderMissing) ...[
+                    const SizedBox(width: AppStyling.spaceMd),
+                    _ArchiveDropdown(
+                      selectedArchive: _selectedArchive,
+                      onOpen: _listArchives,
+                      onSelect: _selectArchive,
+                    ),
+                    if (_selectedArchive != null) ...[
+                      const SizedBox(width: AppStyling.spaceMd),
+                      const _ReadOnlyBadge(),
+                    ] else ...[
+                      const SizedBox(width: AppStyling.spaceMd),
+                      StreamStateBuilder<IssuesWatcherStateData>(
+                        state: _watcherController,
+                        builder: (context, data) => WatchPill(
+                          watching: data.watching,
+                          lastSyncedAt: data.lastSyncedAt,
+                        ),
+                      ),
+                      const SizedBox(width: AppStyling.spaceMd),
+                      _RescanButton(onPressed: _rescan),
+                    ],
                   ],
                 ],
               ),
@@ -389,21 +389,39 @@ class _ProjectsContentState extends State<_ProjectsContent> {
                       style: AppStyling.bodySm,
                     ),
                   )
-                : ProjectContentDockOverlay(
-                    dockController: _dockController,
-                    projectName: project.name,
-                    showDock: _selectedArchive == null,
-                    terminalSessionController: _terminalSessionController,
-                    content: _KanbanOrDetail(
-                      issuesController: _archiveController ?? _issuesController,
-                      readOnly: _selectedArchive != null,
-                      selectedIssueId: _selectedIssueId,
-                      onIssueTap: _openIssue,
-                      onCloseIssue: _closeIssue,
-                      project: project,
-                    ),
-                  ),
+                : _folderMissing
+                    ? _MissingFolderError(path: project.localPath)
+                    : _KanbanOrDetail(
+                        issuesController: _archiveController ?? _issuesController,
+                        readOnly: _selectedArchive != null,
+                        selectedIssueId: _selectedIssueId,
+                        onIssueTap: _openIssue,
+                        onCloseIssue: _closeIssue,
+                        project: project,
+                      ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissingFolderError extends StatelessWidget {
+  final String path;
+
+  const _MissingFolderError({required this.path});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.folder_off_outlined, size: 32, color: AppColors.textSecondary),
+          const SizedBox(height: AppStyling.spaceMd),
+          Text("This project's folder is missing:", style: AppStyling.bodySm),
+          const SizedBox(height: AppStyling.spaceXs),
+          Text(path, style: AppStyling.monoSm.copyWith(color: AppColors.textSecondary)),
         ],
       ),
     );

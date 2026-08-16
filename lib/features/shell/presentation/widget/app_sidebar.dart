@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:crm/core/di/service_locator.dart';
-import 'package:crm/core/state/state.dart';
 import 'package:crm/core/theme/theme.dart';
-import 'package:crm/features/agent/api.dart';
-import 'package:crm/features/home/api.dart';
-import 'package:crm/features/settings/api.dart';
 import '../../domain/controller/shell_controller.dart';
 import '../state/shell_state.dart';
 
@@ -23,17 +18,10 @@ class AppSidebar extends StatelessWidget {
         return Container(
           width: AppStyling.sidebarWidth,
           color: AppColors.surface,
-          child: switch (shellState.selectedTab) {
-            AppTab.home => HomeSidebarSection(controller: locator.get<AgentController>()),
-            AppTab.projects => _ProjectsSidebar(
-                selectedProjectId: shellState.selectedProjectId,
-                onSelect: controller.selectProject,
-              ),
-            AppTab.settings => _SettingsSidebar(
-                selected: shellState.selectedSettingsSection,
-                onSelect: controller.selectSettingsSection,
-              ),
-          },
+          child: _SettingsSidebar(
+            selected: shellState.selectedSettingsSection,
+            onSelect: controller.selectSettingsSection,
+          ),
         );
       },
     );
@@ -52,65 +40,6 @@ class _SidebarHeader extends StatelessWidget {
         AppStyling.spaceLg, AppStyling.spaceLg, AppStyling.spaceLg, AppStyling.spaceSm,
       ),
       child: Text(label.toUpperCase(), style: AppStyling.label),
-    );
-  }
-}
-
-class _EmptyHint extends StatelessWidget {
-  final String text;
-
-  const _EmptyHint({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppStyling.spaceLg),
-      child: Text(text, style: AppStyling.bodySm),
-    );
-  }
-}
-
-class _ProjectsSidebar extends StatelessWidget {
-  final String? selectedProjectId;
-  final ValueChanged<String> onSelect;
-
-  const _ProjectsSidebar({required this.selectedProjectId, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<ProjectsController>(
-      future: createProjectsController(),
-      builder: (context, snapshot) {
-        final controller = snapshot.data;
-        if (controller == null) {
-          return const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SidebarHeader(label: 'Projects'),
-            ],
-          );
-        }
-        return AsyncStreamBuilder<List<Project>>(
-          state: controller,
-          builder: (context, projects) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _SidebarHeader(label: 'Projects'),
-                if (projects.isEmpty)
-                  const _EmptyHint(text: 'No projects registered yet.')
-                else
-                  for (final project in projects)
-                    _SidebarItem(
-                      label: project.name,
-                      selected: project.id == selectedProjectId,
-                      onTap: () => onSelect(project.id),
-                    ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 }

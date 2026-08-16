@@ -58,6 +58,10 @@ class _KanbanSectionState extends State<KanbanSection> {
     widget.controller.createIssue(localPath, issue);
   }
 
+  Future<void> _initializeIssuesFolder() {
+    return widget.controller.initializeIssuesFolder();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -65,6 +69,11 @@ class _KanbanSectionState extends State<KanbanSection> {
       child: AsyncStreamBuilder<List<Issue>>(
         state: widget.controller,
         builder: (context, issues) {
+          if (!widget.controller.folderExists) {
+            return _InitializeIssuesFolderEmptyState(
+              onInitialize: _initializeIssuesFolder,
+            );
+          }
           return Listener(
             onPointerSignal: _handlePointerSignal,
             child: Scrollbar(
@@ -73,13 +82,16 @@ class _KanbanSectionState extends State<KanbanSection> {
               child: SingleChildScrollView(
                 controller: _scrollController,
                 scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final status in IssueStatus.values)
-                      SizedBox(
-                        height: 600,
-                        child: KanbanColumn(
+                child: Padding(
+                  // Reserves blank space below the columns so the
+                  // scrollbar's thumb (drawn near the bottom of the
+                  // viewport) doesn't overlap the last row of cards.
+                  padding: const EdgeInsets.only(bottom: AppStyling.spaceLg),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final status in IssueStatus.values)
+                        KanbanColumn(
                           status: status,
                           issues: issues.where((issue) => issue.status == status).toList(),
                           onIssueTap: widget.onIssueTap,
@@ -89,13 +101,58 @@ class _KanbanSectionState extends State<KanbanSection> {
                                   widget.controller.moveIssue(issue, newStatus),
                           onCreateIssue: widget.readOnly ? null : _createIssue,
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _InitializeIssuesFolderEmptyState extends StatelessWidget {
+  final VoidCallback onInitialize;
+
+  const _InitializeIssuesFolderEmptyState({required this.onInitialize});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.create_new_folder_outlined,
+            size: 32,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(height: AppStyling.spaceMd),
+          Text("This project doesn't have an issues/ folder yet.", style: AppStyling.bodySm),
+          const SizedBox(height: AppStyling.spaceLg),
+          GestureDetector(
+            onTap: onInitialize,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppStyling.spaceLg,
+                vertical: AppStyling.spaceSm,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.accent,
+                borderRadius: BorderRadius.circular(AppStyling.radiusMd),
+              ),
+              child: Text(
+                'Initialize issues folder',
+                style: AppStyling.bodySm.copyWith(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

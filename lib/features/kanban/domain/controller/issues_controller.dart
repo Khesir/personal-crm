@@ -7,18 +7,38 @@ class IssuesController extends StreamState<AsyncState<List<Issue>>> {
   final IssuesRepository repository;
 
   String? _localPath;
+  bool _folderExists = true;
 
   IssuesController(this.repository) : super(const AsyncLoading());
 
   String? get localPath => _localPath;
 
-  Future<void> load(String localPath) {
+  /// Whether `{localPath}/issues/` was confirmed to exist as of the most
+  /// recent [load]/[refresh]/[initializeIssuesFolder] call. Defaults to
+  /// `true` so consumers don't flash an "initialize" empty state before
+  /// the first load resolves.
+  bool get folderExists => _folderExists;
+
+  Future<void> load(String localPath) async {
     _localPath = localPath;
-    return execute(() => repository.getIssues(localPath));
+    _folderExists = await repository.issuesFolderExists(localPath);
+    await execute(() => repository.getIssues(localPath));
   }
 
-  Future<void> refresh(String localPath) =>
-      execute(() => repository.getIssues(localPath));
+  Future<void> refresh(String localPath) async {
+    _folderExists = await repository.issuesFolderExists(localPath);
+    await execute(() => repository.getIssues(localPath));
+  }
+
+  /// Scaffolds `{localPath}/issues/` via [IssuesRepository.initializeIssuesFolder],
+  /// then reloads so the (now empty but scaffolded) columns appear and
+  /// [folderExists] flips to `true`. No-op if [load] hasn't been called yet.
+  Future<void> initializeIssuesFolder() async {
+    final path = _localPath;
+    if (path == null) return;
+    await repository.initializeIssuesFolder(path);
+    await load(path);
+  }
 
   Future<void> loadArchive(String localPath, String archiveName) =>
       execute(() => repository.getArchivedIssues(localPath, archiveName));

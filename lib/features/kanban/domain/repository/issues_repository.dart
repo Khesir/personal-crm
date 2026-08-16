@@ -41,4 +41,16 @@ abstract class IssuesRepository {
 
   /// Permanently deletes the issue's file from disk.
   Future<void> deleteIssue(Issue issue);
+
+  /// Scaffolds `{localPath}/issues/{backlog,ready,in-progress,qa,done}/`,
+  /// creating each status folder that doesn't already exist.
+  ///
+  /// Idempotent: safe to call against an already-scaffolded `issues/`
+  /// folder without clobbering any files already inside those folders.
+  Future<void> initializeIssuesFolder(String localPath);
+
+  /// Whether `{localPath}/issues/` exists at all. Distinct from
+  /// [getIssues] returning an empty list, which also happens when the
+  /// folder exists but every status subfolder is empty.
+  Future<bool> issuesFolderExists(String localPath);
 }

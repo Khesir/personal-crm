@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:crm/core/theme/theme.dart';
-import 'package:crm/features/home/presentation/widget/code_block.dart';
+import 'package:crm/core/ui/code_block.dart';
 
 class MarkdownIssueBody extends StatelessWidget {
   final String content;

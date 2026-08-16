@@ -385,5 +385,53 @@ Updated body.
       expect(updated.body.trim(), '## Description\nUpdated body.');
       expect(updated.filePath, issue.filePath);
     });
+
+    test('initializeIssuesFolder() creates all five status folders', () async {
+      await repository.initializeIssuesFolder(tempDir.path);
+
+      for (final folder in ['backlog', 'ready', 'in-progress', 'qa', 'done']) {
+        expect(
+          Directory(p.join(tempDir.path, 'issues', folder)).existsSync(),
+          isTrue,
+          reason: '$folder folder should exist',
+        );
+      }
+    });
+
+    test('initializeIssuesFolder() is idempotent and does not clobber existing files', () async {
+      await repository.initializeIssuesFolder(tempDir.path);
+      final markerFile = File(p.join(tempDir.path, 'issues', 'backlog', 'issue-001.md'));
+      await markerFile.writeAsString('existing content');
+
+      await repository.initializeIssuesFolder(tempDir.path);
+
+      expect(markerFile.existsSync(), isTrue);
+      expect(await markerFile.readAsString(), 'existing content');
+      for (final folder in ['backlog', 'ready', 'in-progress', 'qa', 'done']) {
+        expect(Directory(p.join(tempDir.path, 'issues', folder)).existsSync(), isTrue);
+      }
+    });
+
+    test('issuesFolderExists() returns false when issues/ does not exist', () async {
+      final exists = await repository.issuesFolderExists(tempDir.path);
+
+      expect(exists, isFalse);
+    });
+
+    test('issuesFolderExists() returns true when issues/ exists', () async {
+      await repository.initializeIssuesFolder(tempDir.path);
+
+      final exists = await repository.issuesFolderExists(tempDir.path);
+
+      expect(exists, isTrue);
+    });
+
+    test('issuesFolderExists() returns true even when issues/ exists but has no status folders', () async {
+      Directory(p.join(tempDir.path, 'issues')).createSync(recursive: true);
+
+      final exists = await repository.issuesFolderExists(tempDir.path);
+
+      expect(exists, isTrue);
+    });
   });
 }
