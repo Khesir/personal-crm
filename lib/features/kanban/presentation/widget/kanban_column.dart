@@ -25,6 +25,8 @@ class KanbanColumn extends StatefulWidget {
   State<KanbanColumn> createState() => _KanbanColumnState();
 }
 
+enum _ColumnMenuAction { addCard }
+
 class _KanbanColumnState extends State<KanbanColumn> {
   bool _isQuickAdding = false;
   final _addController = TextEditingController();
@@ -155,13 +157,31 @@ class _KanbanColumnState extends State<KanbanColumn> {
                     Text('${widget.issues.length}', style: AppStyling.monoSm),
                     const Spacer(),
                     if (widget.onCreateIssue != null)
-                      GestureDetector(
-                        onTap: _startAdd,
-                        child: const Icon(
-                          Icons.add,
+                      PopupMenuButton<_ColumnMenuAction>(
+                        padding: EdgeInsets.zero,
+                        tooltip: '',
+                        color: AppColors.surfaceRaised,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppStyling.radiusMd),
+                          side: const BorderSide(color: AppColors.border),
+                        ),
+                        icon: const Icon(
+                          Icons.more_horiz,
                           size: 16,
                           color: AppColors.textTertiary,
                         ),
+                        onSelected: (action) {
+                          switch (action) {
+                            case _ColumnMenuAction.addCard:
+                              _startAdd();
+                          }
+                        },
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(
+                            value: _ColumnMenuAction.addCard,
+                            child: Text('Add card'),
+                          ),
+                        ],
                       ),
                   ],
                 ),
